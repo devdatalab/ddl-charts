@@ -642,6 +642,16 @@ function renderTrajectory(chartArea, city, xScale, yScale, lineGenerator, colorM
     .attr('data-iso3', city.iso3)
     .datum(city);
 
+  // Invisible hit area for easier hovering (wider stroke, transparent)
+  cityGroup
+    .append('path')
+    .attr('class', 'trajectory-hit-area')
+    .attr('d', lineGenerator(smoothedTrajectory))
+    .style('fill', 'none')
+    .style('stroke', 'transparent')
+    .style('stroke-width', 20)
+    .style('pointer-events', 'stroke');
+
   // Draw trajectory line
   cityGroup
     .append('path')
@@ -651,6 +661,7 @@ function renderTrajectory(chartArea, city, xScale, yScale, lineGenerator, colorM
     .style('stroke', color)
     .style('stroke-width', highlighted ? 2.5 : 1)
     .style('stroke-opacity', highlighted ? 0.9 : 0.25)
+    .style('pointer-events', 'none')
     .style('transition', 'stroke-width 0.15s ease, stroke-opacity 0.15s ease, stroke 0.15s ease');
 
   // Draw start marker (solid circle)
