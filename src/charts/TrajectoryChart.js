@@ -148,10 +148,6 @@ export function createTrajectoryChart(parent, data, options = {}) {
         .style('stroke', color)
         .style('fill', highlighted ? 'white' : color)
         .style('opacity', highlighted ? 1 : 0.6);
-
-      g.selectAll('.year-label')
-        .style('opacity', highlighted ? 1 : 0)
-        .style('fill', color);
     });
   }
 
@@ -196,6 +192,8 @@ export function createTrajectoryChart(parent, data, options = {}) {
         } else if (cityIsActive && sameGroup) {
           // Same active group as hovered - dim slightly to make hovered stand out
           g.select('.trajectory-line').style('stroke-opacity', 0.35);
+          g.select('.marker-start').style('opacity', 0.35);
+          g.select('.marker-end').style('opacity', 0.35);
         } else if (cityIsActive) {
           // Different active group - keep full visibility
           // (do nothing - they maintain their current appearance)
@@ -341,11 +339,52 @@ export function createTrajectoryChart(parent, data, options = {}) {
       });
     }
 
+    // Marker key - shows what start/end markers mean
+    const markerKey = legendContainerEl
+      .append('div')
+      .style('display', 'flex')
+      .style('justify-content', 'center')
+      .style('gap', '16px')
+      .style('padding', '8px 12px')
+      .style('border-bottom', `1px solid ${UI_COLORS.gridLight}`)
+      .style('font-size', '11px')
+      .style('color', UI_COLORS.textLight);
+
+    // Start marker (solid circle)
+    const startKey = markerKey.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '5px');
+
+    startKey
+      .append('svg')
+      .attr('width', '10')
+      .attr('height', '10')
+      .append('circle')
+      .attr('cx', '5')
+      .attr('cy', '5')
+      .attr('r', '4')
+      .style('fill', '#666');
+
+    startKey.append('span').text('2013');
+
+    // End marker (hollow triangle)
+    const endKey = markerKey.append('div').style('display', 'flex').style('align-items', 'center').style('gap', '5px');
+
+    endKey
+      .append('svg')
+      .attr('width', '12')
+      .attr('height', '12')
+      .append('path')
+      .attr('d', 'M6,1 L11,10 L1,10 Z')
+      .style('fill', 'white')
+      .style('stroke', '#666')
+      .style('stroke-width', '1.5');
+
+    endKey.append('span').text('2023');
+
     // Scrollable legend items container
     legendItemsContainer = legendContainerEl
       .append('div')
       .attr('class', 'legend-items')
-      .style('max-height', `${dimensions.innerHeight - (showLegendControls ? 90 : 20)}px`)
+      .style('max-height', `${dimensions.innerHeight - (showLegendControls ? 130 : 60)}px`)
       .style('overflow-y', 'auto');
 
     // Function to update legend appearance
@@ -591,8 +630,6 @@ export function createTrajectoryChart(parent, data, options = {}) {
           g.select('.marker-start').style('opacity', match ? 1 : 0.05);
 
           g.select('.marker-end').style('opacity', match ? 1 : 0.05);
-
-          g.selectAll('.year-label').style('opacity', match && isCityHighlighted(city) ? 1 : 0);
         });
       },
     });
@@ -699,33 +736,6 @@ function renderTrajectory(chartArea, city, xScale, yScale, lineGenerator, colorM
     .style('stroke-width', highlighted ? 1.5 : 1)
     .style('opacity', highlighted ? 1 : 0.6)
     .style('transition', 'all 0.15s ease');
-
-  // Add year labels (always render, opacity controlled by highlight state)
-  cityGroup
-    .append('text')
-    .attr('class', 'year-label year-start')
-    .attr('x', xScale(startPoint.gdp))
-    .attr('y', yScale(startPoint.pm25) - 8)
-    .attr('text-anchor', 'middle')
-    .style('font-size', '10px')
-    .style('fill', color)
-    .style('font-weight', '600')
-    .style('opacity', highlighted ? 1 : 0)
-    .style('pointer-events', 'none')
-    .text(city.yearStart);
-
-  cityGroup
-    .append('text')
-    .attr('class', 'year-label year-end')
-    .attr('x', xScale(endPoint.gdp))
-    .attr('y', yScale(endPoint.pm25) - 8)
-    .attr('text-anchor', 'middle')
-    .style('font-size', '10px')
-    .style('fill', color)
-    .style('font-weight', '600')
-    .style('opacity', highlighted ? 1 : 0)
-    .style('pointer-events', 'none')
-    .text(city.yearEnd);
 
   return cityGroup;
 }

@@ -42,9 +42,7 @@
     }
 
     .ddl-branding {
-      padding: 12px 12px 8px;
-      border-top: 1px solid #eee;
-      margin-top: 8px;
+      padding: 0;
     }
 
     .ddl-branding svg {
@@ -80,7 +78,6 @@
       gap: 8px;
       padding: 8px 12px;
       border-bottom: 1px solid #eee;
-      margin-bottom: 8px;
     }
 
     .legend-btn {
@@ -107,10 +104,9 @@
 
     .legend-mode-toggle {
       display: flex;
-      padding: 4px 12px;
+      padding: 8px 12px;
       border-bottom: 1px solid #eee;
-      margin-bottom: 8px;
-      gap: 4px;
+      gap: 0;
     }
 
     .mode-btn {
@@ -142,7 +138,7 @@
 <body>
   <div class="page-header">
     <h1>City GDP per Capita vs PM2.5 Trajectories</h1>
-    <p>Trajectories of cities with population > 1 million from 2013-2023. Click legend to highlight, hover for details.</p>
+    <p>Trajectories of top 3 cities per country (limited to population > 1M), 2013-2023. Click legend to highlight, hover over axis labels for details.</p>
   </div>
 
   <div id="chart-container">
@@ -165,6 +161,40 @@
       'South America': ['ARG', 'BOL', 'BRA', 'CHL', 'COL', 'ECU', 'PER', 'PRY', 'URY'],
       'Central Asia': ['KAZ', 'UZB', 'TJK', 'KGZ', 'TKM', 'AZE', 'ARM', 'GEO'],
       'Oceania': ['AUS', 'NZL'],
+    };
+
+    // ISO3 to full country name mapping
+    const ISO3_TO_NAME = {
+      'AFG': 'Afghanistan', 'AGO': 'Angola', 'ARE': 'United Arab Emirates', 'ARG': 'Argentina',
+      'ARM': 'Armenia', 'AUS': 'Australia', 'AUT': 'Austria', 'AZE': 'Azerbaijan',
+      'BDI': 'Burundi', 'BEL': 'Belgium', 'BEN': 'Benin', 'BFA': 'Burkina Faso',
+      'BGD': 'Bangladesh', 'BGR': 'Bulgaria', 'BHR': 'Bahrain', 'BLR': 'Belarus',
+      'BOL': 'Bolivia', 'BRA': 'Brazil', 'CAF': 'Central African Republic', 'CAN': 'Canada',
+      'CHL': 'Chile', 'CHN': 'China', 'CIV': "Côte d'Ivoire", 'CMR': 'Cameroon',
+      'COD': 'DR Congo', 'COG': 'Congo', 'COL': 'Colombia', 'CRI': 'Costa Rica',
+      'CZE': 'Czechia', 'DEU': 'Germany', 'DNK': 'Denmark', 'DOM': 'Dominican Republic',
+      'DZA': 'Algeria', 'ECU': 'Ecuador', 'EGY': 'Egypt', 'ESP': 'Spain',
+      'ETH': 'Ethiopia', 'FRA': 'France', 'GBR': 'United Kingdom', 'GEO': 'Georgia',
+      'GHA': 'Ghana', 'GIN': 'Guinea', 'GMB': 'Gambia', 'GRC': 'Greece',
+      'GTM': 'Guatemala', 'HND': 'Honduras', 'HTI': 'Haiti', 'HUN': 'Hungary',
+      'IDN': 'Indonesia', 'IND': 'India', 'IRL': 'Ireland', 'IRN': 'Iran',
+      'IRQ': 'Iraq', 'ISR': 'Israel', 'ITA': 'Italy', 'JOR': 'Jordan',
+      'JPN': 'Japan', 'KAZ': 'Kazakhstan', 'KEN': 'Kenya', 'KGZ': 'Kyrgyzstan',
+      'KHM': 'Cambodia', 'KOR': 'South Korea', 'KWT': 'Kuwait', 'LBN': 'Lebanon',
+      'LBR': 'Liberia', 'LBY': 'Libya', 'LKA': 'Sri Lanka', 'MAR': 'Morocco',
+      'MDG': 'Madagascar', 'MEX': 'Mexico', 'MLI': 'Mali', 'MMR': 'Myanmar',
+      'MNG': 'Mongolia', 'MOZ': 'Mozambique', 'MRT': 'Mauritania', 'MYS': 'Malaysia',
+      'NER': 'Niger', 'NGA': 'Nigeria', 'NIC': 'Nicaragua', 'NLD': 'Netherlands',
+      'NPL': 'Nepal', 'NZL': 'New Zealand', 'PAK': 'Pakistan', 'PAN': 'Panama',
+      'PER': 'Peru', 'PHL': 'Philippines', 'POL': 'Poland', 'PRT': 'Portugal',
+      'PRY': 'Paraguay', 'QAT': 'Qatar', 'ROU': 'Romania', 'RUS': 'Russia',
+      'RWA': 'Rwanda', 'SAU': 'Saudi Arabia', 'SDN': 'Sudan', 'SEN': 'Senegal',
+      'SGP': 'Singapore', 'SLE': 'Sierra Leone', 'SLV': 'El Salvador', 'SOM': 'Somalia',
+      'SRB': 'Serbia', 'SWE': 'Sweden', 'SYR': 'Syria', 'TCD': 'Chad',
+      'TGO': 'Togo', 'THA': 'Thailand', 'TJK': 'Tajikistan', 'TKM': 'Turkmenistan',
+      'TUN': 'Tunisia', 'TUR': 'Turkey', 'TZA': 'Tanzania', 'UGA': 'Uganda',
+      'UKR': 'Ukraine', 'URY': 'Uruguay', 'USA': 'United States', 'UZB': 'Uzbekistan',
+      'VNM': 'Vietnam', 'ZAF': 'South Africa', 'ZMB': 'Zambia', 'ZWE': 'Zimbabwe',
     };
 
     // Create reverse mapping: iso3 -> region
@@ -205,8 +235,9 @@
     const UI_COLORS = {
       text: '#5b5b5b',
       textLight: '#999999',
-      muted: 'rgba(150, 150, 150, 0.2)',
-      mutedMarker: 'rgba(150, 150, 150, 0.4)',
+      muted: 'rgba(150, 150, 150, 0.5)',
+      mutedMarker: 'rgba(150, 150, 150, 0.7)',
+      mutedSolid: 'rgb(150, 150, 150)',  // Fully opaque version for hover
     };
 
     // State
@@ -304,8 +335,7 @@
         .append('svg')
         .attr('width', width)
         .attr('height', height)
-        .style('display', 'block')
-        .style('margin', '0 auto');
+        .style('display', 'block');
 
       const chartArea = svg
         .append('g')
@@ -323,6 +353,32 @@
       const xTickValues = [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000];
       const yTickValues = [5, 10, 20, 50, 100, 200];
 
+      // Gridlines (OWID-style, rendered behind data)
+      // Skip first tick value to avoid gridlines on the axes
+      chartArea.append('g')
+        .attr('class', 'grid x-grid')
+        .selectAll('line')
+        .data(xTickValues.slice(1))
+        .join('line')
+        .attr('x1', d => xScale(d))
+        .attr('x2', d => xScale(d))
+        .attr('y1', 0)
+        .attr('y2', innerHeight)
+        .attr('stroke', '#e0e0e0')
+        .attr('stroke-dasharray', '2,2');
+
+      chartArea.append('g')
+        .attr('class', 'grid y-grid')
+        .selectAll('line')
+        .data(yTickValues.slice(1))
+        .join('line')
+        .attr('x1', 0)
+        .attr('x2', innerWidth)
+        .attr('y1', d => yScale(d))
+        .attr('y2', d => yScale(d))
+        .attr('stroke', '#e0e0e0')
+        .attr('stroke-dasharray', '2,2');
+
       // Axes
       chartArea.append('g')
         .attr('class', 'x-axis')
@@ -332,8 +388,9 @@
           .tickFormat(d => d >= 1000 ? `$${d/1000}K` : `$${d}`)
           .tickSize(5)
         )
-        .call(g => g.select('.domain').remove())  // Remove domain line
+        .call(g => g.select('.domain').attr('stroke', '#ccc'))
         .call(g => g.selectAll('.tick line').attr('stroke', '#ccc'))
+        .call(g => g.select('.tick:first-of-type line').remove())  // Remove first tick mark
         .selectAll('text')
         .style('font-size', '11px')
         .style('fill', UI_COLORS.text);
@@ -341,33 +398,91 @@
       chartArea.append('g')
         .attr('class', 'y-axis')
         .call(d3.axisLeft(yScale)
-          .tickValues(yTickValues)
+          .tickValues(yTickValues.slice(1))  // Skip 5 to avoid overlap with x-axis
           .tickFormat(d => d)
           .tickSize(5)
         )
-        .call(g => g.select('.domain').remove())  // Remove domain line
+        .call(g => g.select('.domain').attr('stroke', '#ccc'))
         .call(g => g.selectAll('.tick line').attr('stroke', '#ccc'))
         .selectAll('text')
         .style('font-size', '11px')
         .style('fill', UI_COLORS.text);
 
-      // Axis labels
-      svg.append('text')
-        .attr('x', margin.left + innerWidth / 2)
-        .attr('y', height - 12)
-        .attr('text-anchor', 'middle')
-        .style('font-size', '13px')
-        .style('fill', UI_COLORS.text)
-        .text(data.metadata.xAxis);
+      // Create layer groups - markers on top of lines, both on top of gridlines
+      const linesLayer = chartArea.append('g').attr('class', 'lines-layer');
+      const markersLayer = chartArea.append('g').attr('class', 'markers-layer');
 
-      svg.append('text')
+      // X-axis label with info tooltip
+      const xAxisLabel = container.append('div')
+        .style('position', 'absolute')
+        .style('left', (margin.left + innerWidth / 2) + 'px')
+        .style('bottom', (margin.bottom - 20) + 'px')
+        .style('transform', 'translateX(-50%)')
+        .style('font-size', '13px')
+        .style('color', UI_COLORS.text);
+
+      xAxisLabel
+        .style('cursor', 'help')
+        .text('GDP per Capita ($)');
+
+      const xTooltip = xAxisLabel.append('div')
+        .style('position', 'absolute')
+        .style('bottom', '20px')
+        .style('left', '50%')
+        .style('transform', 'translateX(-50%)')
+        .style('background', 'rgba(50, 50, 50, 0.95)')
+        .style('color', 'white')
+        .style('padding', '10px 14px')
+        .style('border-radius', '4px')
+        .style('font-size', '12px')
+        .style('font-weight', 'normal')
+        .style('line-height', '1.5')
+        .style('width', '260px')
+        .style('text-align', 'left')
+        .style('opacity', '0')
+        .style('pointer-events', 'none')
+        .style('transition', 'opacity 0.15s ease')
+        .style('z-index', '1000')
+        .html('<strong>GDP per Capita</strong><br>Gross Domestic Product per person, adjusted for purchasing power parity (PPP) in constant 2017 international dollars. Allows comparison across countries by accounting for price level differences.');
+
+      xAxisLabel.on('mouseenter', () => xTooltip.style('opacity', '1'))
+                .on('mouseleave', () => xTooltip.style('opacity', '0'));
+
+      // Y-axis label with info tooltip (using SVG for proper rotation)
+      const yLabelGroup = svg.append('g')
+        .attr('transform', `translate(50, ${margin.top + innerHeight / 2})`);
+
+      const yLabelText = yLabelGroup.append('text')
         .attr('transform', 'rotate(-90)')
-        .attr('x', -(margin.top + innerHeight / 2))
-        .attr('y', 15)
         .attr('text-anchor', 'middle')
         .style('font-size', '13px')
         .style('fill', UI_COLORS.text)
-        .text(data.metadata.yAxis);
+        .text('PM2.5 Pollution (μg/m³)');
+
+      // Y-axis tooltip (HTML overlay, positioned near label)
+      const yTooltip = container.append('div')
+        .style('position', 'absolute')
+        .style('left', '30px')
+        .style('top', (margin.top + innerHeight / 2 - 70) + 'px')
+        .style('background', 'rgba(50, 50, 50, 0.95)')
+        .style('color', 'white')
+        .style('padding', '10px 14px')
+        .style('border-radius', '4px')
+        .style('font-size', '12px')
+        .style('line-height', '1.5')
+        .style('width', '260px')
+        .style('text-align', 'left')
+        .style('opacity', '0')
+        .style('pointer-events', 'none')
+        .style('transition', 'opacity 0.15s ease')
+        .style('z-index', '1000')
+        .html('<strong>PM2.5 (Worst 3-Month Mean)</strong><br>Fine particulate matter ≤2.5 micrometers in diameter. Shows average concentration during the three most polluted months. PM2.5 penetrates deep into lungs and bloodstream. WHO guideline: &lt;5 μg/m³ annual mean.');
+
+      // Show tooltip on hover over the entire label group
+      yLabelGroup
+        .style('cursor', 'help')
+        .on('mouseenter', () => yTooltip.style('opacity', '1'))
+        .on('mouseleave', () => yTooltip.style('opacity', '0'));
 
       // Line generator
       const line = d3.line()
@@ -375,9 +490,14 @@
         .y(d => yScale(d.pm25))
         .curve(d3.curveCardinal.tension(0.5));
 
+      // Helper to get marker group for a city
+      function getMarkerGroup(cityId) {
+        return markersLayer.select(`.marker-group[data-city-id="${cityId}"]`);
+      }
+
       // Function to update trajectories
       function updateAllTrajectories() {
-        chartArea.selectAll('.city-group').each(function() {
+        linesLayer.selectAll('.city-group').each(function() {
           const g = d3.select(this);
           const city = g.datum();
           const highlighted = isHighlighted(city.iso3);
@@ -388,23 +508,26 @@
             .style('stroke-width', highlighted ? 2.5 : 1.5)
             .style('stroke-opacity', highlighted ? 1 : 0.5);
 
-          g.select('.marker-start')
+          const mg = getMarkerGroup(city.id);
+          mg.select('.marker-start')
             .style('fill', color)
             .attr('r', highlighted ? 4 : 3)
             .style('opacity', highlighted ? 1 : 0.6);
 
-          g.select('.marker-end')
+          mg.select('.marker-end')
             .style('stroke', color)
             .style('fill', highlighted ? 'white' : color)
             .style('opacity', highlighted ? 1 : 0.6);
-
-          g.selectAll('.year-label')
-            .style('opacity', highlighted ? 1 : 0)
-            .style('fill', color);
         });
 
         // Re-sort to bring highlighted to front
-        chartArea.selectAll('.city-group')
+        linesLayer.selectAll('.city-group')
+          .sort((a, b) => {
+            const aH = isHighlighted(a.iso3) ? 1 : 0;
+            const bH = isHighlighted(b.iso3) ? 1 : 0;
+            return aH - bH;
+          });
+        markersLayer.selectAll('.marker-group')
           .sort((a, b) => {
             const aH = isHighlighted(a.iso3) ? 1 : 0;
             const bH = isHighlighted(b.iso3) ? 1 : 0;
@@ -427,7 +550,8 @@
           pm25: smoothedPm25[i],
         }));
 
-        const cityGroup = chartArea.append('g')
+        // City group in lines layer (for lines and hit area)
+        const cityGroup = linesLayer.append('g')
           .attr('class', 'city-group')
           .attr('data-city-id', city.id)
           .attr('data-iso3', city.iso3)
@@ -452,8 +576,14 @@
           .style('pointer-events', 'none')  // Let hit area handle events
           .style('transition', 'stroke-width 0.15s ease, stroke-opacity 0.15s ease, stroke 0.15s ease');
 
+        // Markers in markers layer (renders on top of all lines)
+        const markerGroup = markersLayer.append('g')
+          .attr('class', 'marker-group')
+          .attr('data-city-id', city.id)
+          .datum(city);
+
         const start = city.trajectory[0];
-        cityGroup.append('circle')
+        markerGroup.append('circle')
           .attr('class', 'marker-start')
           .attr('cx', xScale(start.gdp))
           .attr('cy', yScale(start.pm25))
@@ -466,7 +596,7 @@
         const size = highlighted ? 5 : 4;
         const triangle = d3.symbol().type(d3.symbolTriangle).size(size * size * 2);
 
-        cityGroup.append('path')
+        markerGroup.append('path')
           .attr('class', 'marker-end')
           .attr('d', triangle)
           .attr('transform', `translate(${xScale(end.gdp)},${yScale(end.pm25)})`)
@@ -475,30 +605,6 @@
           .style('stroke-width', highlighted ? 1.5 : 1)
           .style('opacity', highlighted ? 1 : 0.6)
           .style('transition', 'all 0.15s ease');
-
-        cityGroup.append('text')
-          .attr('class', 'year-label year-start')
-          .attr('x', xScale(start.gdp))
-          .attr('y', yScale(start.pm25) - 8)
-          .attr('text-anchor', 'middle')
-          .style('font-size', '10px')
-          .style('fill', color)
-          .style('font-weight', '600')
-          .style('opacity', highlighted ? 1 : 0)
-          .style('pointer-events', 'none')
-          .text(city.yearStart);
-
-        cityGroup.append('text')
-          .attr('class', 'year-label year-end')
-          .attr('x', xScale(end.gdp))
-          .attr('y', yScale(end.pm25) - 8)
-          .attr('text-anchor', 'middle')
-          .style('font-size', '10px')
-          .style('fill', color)
-          .style('font-weight', '600')
-          .style('opacity', highlighted ? 1 : 0)
-          .style('pointer-events', 'none')
-          .text(city.yearEnd);
 
         return cityGroup;
       }
@@ -512,20 +618,22 @@
 
       sortedCities.forEach(city => renderCity(city));
 
-      // Tooltip - positioned to avoid hiding the city line
-      const tooltip = container.append('div')
+      // Info box - positioned at top-left of plot area
+      const infoBox = container.append('div')
+        .attr('class', 'info-box')
         .style('position', 'absolute')
-        .style('pointer-events', 'none')
-        .style('background', 'rgba(255,255,255,0.97)')
-        .style('border', '1px solid #ccc')
+        .style('left', (margin.left + 15) + 'px')
+        .style('top', (margin.top + 60) + 'px')
+        .style('background', 'rgba(255, 255, 255, 0.95)')
+        .style('border', '1px solid #ddd')
         .style('border-radius', '4px')
-        .style('padding', '10px 12px')
-        .style('box-shadow', '0 2px 8px rgba(0,0,0,0.15)')
+        .style('padding', '10px 14px')
+        .style('pointer-events', 'none')
         .style('font-size', '13px')
+        .style('color', UI_COLORS.text)
+        .style('box-shadow', '0 1px 4px rgba(0,0,0,0.1)')
         .style('opacity', 0)
-        .style('z-index', 1000)
-        .style('transition', 'opacity 0.1s ease')
-        .style('max-width', '220px');
+        .style('transition', 'opacity 0.15s ease');
 
       function showTooltip(city, event) {
         const gdpChange = ((city.gdpEnd - city.gdpStart) / city.gdpStart * 100).toFixed(0);
@@ -535,61 +643,32 @@
         const gdpColor = gdpChange >= 0 ? '#43A047' : '#E53935';
         const pm25Color = pm25Change <= 0 ? '#43A047' : '#E53935';
 
-        tooltip.html(`
-          <div style="font-weight: 600; margin-bottom: 4px;">${city.name}</div>
-          <div style="color: #999; margin-bottom: 8px; font-size: 12px;">${city.country}</div>
-          <div style="font-size: 12px; line-height: 1.6;">
-            <div><span style="color: #999;">Period:</span> ${city.yearStart} → ${city.yearEnd}</div>
-            <div><span style="color: #999;">GDP/capita:</span> $${Math.round(city.gdpStart).toLocaleString()} → $${Math.round(city.gdpEnd).toLocaleString()} <span style="color: ${gdpColor};">${gdpArrow}${Math.abs(gdpChange)}%</span></div>
-            <div><span style="color: #999;">PM2.5:</span> ${city.pm25Start.toFixed(1)} → ${city.pm25End.toFixed(1)} <span style="color: ${pm25Color};">${pm25Arrow}${Math.abs(pm25Change)}%</span></div>
+        const countryName = ISO3_TO_NAME[city.iso3] || city.country || city.iso3;
+        infoBox.html(`
+          <div style="font-weight: 600; font-size: 15px; margin-bottom: 2px;">${city.name}</div>
+          <div style="color: #999; margin-bottom: 6px; font-size: 12px;">${countryName}</div>
+          <div style="font-size: 12px; line-height: 1.5;">
+            <span style="color: #999;">GDP:</span> $${Math.round(city.gdpStart).toLocaleString()} → $${Math.round(city.gdpEnd).toLocaleString()} <span style="color: ${gdpColor};">${gdpArrow}${Math.abs(gdpChange)}%</span><br>
+            <span style="color: #999;">PM2.5:</span> ${city.pm25Start.toFixed(1)} → ${city.pm25End.toFixed(1)} <span style="color: ${pm25Color};">${pm25Arrow}${Math.abs(pm25Change)}%</span>
           </div>
         `);
-
-        const containerRect = container.node().getBoundingClientRect();
-        const [x, y] = d3.pointer(event, container.node());
-
-        // Position tooltip to avoid hiding the city line
-        // Try to place it above and to the right first
-        const tooltipWidth = 220;
-        const tooltipHeight = 130;
-
-        let left, top;
-
-        // Prefer placing tooltip to the upper-right of cursor
-        if (x + tooltipWidth + 25 < containerRect.width) {
-          left = x + 20;
-        } else {
-          // Place to the left
-          left = x - tooltipWidth - 20;
-        }
-
-        // Place above cursor to avoid hiding the trajectory
-        if (y - tooltipHeight - 20 > 0) {
-          top = y - tooltipHeight - 10;
-        } else {
-          // Place below if not enough room above
-          top = y + 20;
-        }
-
-        tooltip
-          .style('left', Math.max(10, left) + 'px')
-          .style('top', Math.max(10, top) + 'px')
-          .style('opacity', 1);
+        infoBox.style('opacity', 1);
       }
 
       function hideTooltip() {
-        tooltip.style('opacity', 0);
+        infoBox.style('opacity', 0);
       }
 
       // HOVER INTERACTIONS
-      chartArea.selectAll('.city-group')
+      linesLayer.selectAll('.city-group')
         .style('cursor', 'pointer')
         .on('mouseenter', function(event) {
           const hoveredCity = d3.select(this).datum();
 
-          chartArea.selectAll('.city-group').each(function() {
+          linesLayer.selectAll('.city-group').each(function() {
             const g = d3.select(this);
             const city = g.datum();
+            const mg = getMarkerGroup(city.id);
             const isHoveredCity = city.id === hoveredCity.id;
             const cityIsActive = isHighlighted(city.iso3);
 
@@ -599,14 +678,33 @@
               : ISO3_TO_REGION[city.iso3] === ISO3_TO_REGION[hoveredCity.iso3];
 
             if (isHoveredCity) {
+              // Hovered city: full opacity for line and markers
+              // If not highlighted, switch to solid color
+              if (!cityIsActive) {
+                g.select('.trajectory-line')
+                  .style('stroke', UI_COLORS.mutedSolid);
+                mg.select('.marker-start')
+                  .style('fill', UI_COLORS.mutedSolid);
+                mg.select('.marker-end')
+                  .style('stroke', UI_COLORS.mutedSolid);
+              }
               g.select('.trajectory-line')
                 .style('stroke-width', 4)
                 .style('stroke-opacity', 1);
+              mg.select('.marker-start')
+                .style('opacity', 1);
+              mg.select('.marker-end')
+                .style('opacity', 1);
               g.raise();
+              mg.raise();
             } else if (cityIsActive && sameGroup) {
               // Same active group as hovered - dim slightly to make hovered stand out
               g.select('.trajectory-line')
                 .style('stroke-opacity', 0.35);
+              mg.select('.marker-start')
+                .style('opacity', 0.35);
+              mg.select('.marker-end')
+                .style('opacity', 0.35);
             } else if (cityIsActive) {
               // Different active group - keep full visibility
               // (do nothing - they maintain their current appearance)
@@ -614,6 +712,10 @@
               // Dim non-active cities but keep them somewhat visible
               g.select('.trajectory-line')
                 .style('stroke-opacity', 0.15);
+              mg.select('.marker-start')
+                .style('opacity', 0.15);
+              mg.select('.marker-end')
+                .style('opacity', 0.15);
             }
           });
 
@@ -628,20 +730,67 @@
           hideTooltip();
         });
 
-      // Legend and branding wrapper
+      // DDL Branding - directly in container
+      const logoWidth = 350;
+      const ddlBranding = container.append('a')
+        .attr('class', 'ddl-branding')
+        .attr('href', 'https://devdatalab.org')
+        .attr('target', '_blank')
+        .style('display', 'block')
+        .style('position', 'absolute')
+        .style('top', '20px')
+        .style('right', '20px')
+        .style('width', logoWidth + 'px');
+
+      // Legend wrapper - aligned with chart area
       const legendWrapper = container.append('div')
         .style('position', 'absolute')
-        .style('top', (margin.top + 10) + 'px')
-        .style('right', '20px')
-        .style('width', '180px')
+        .style('top', (20 + 52 + margin.top) + 'px')  // TODO: 52px is approximate search wrapper height - calculate dynamically
+        .style('right', '50px')  // Match Y-axis label spacing (50px from edge)
+        .style('width', '200px')
         .style('display', 'flex')
         .style('flex-direction', 'column')
-        .style('max-height', (innerHeight + 40) + 'px');
+        .style('max-height', innerHeight + 'px');  // Max height to match Y-axis, can shrink for regions
 
-      // Legend Container
+      ddlBranding.append('svg')
+        .attr('viewBox', '0 0 1877 207')
+        .attr('xmlns', 'http://www.w3.org/2000/svg')
+        .style('width', '100%')
+        .style('height', 'auto')
+        .style('opacity', '0.8')
+        .html(`
+          <g transform="translate(18.73,77.32)" style="fill:#393d3f">
+            <path d="m 319.3,-53.6 h 52.32 q 22.32,0 22.32,21.12 v 108 q 0,21.12 -22.32,21.12 h -52.32 z m 52.8,126.24 v -102.24 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -23.76 v 116.16 h 23.76 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
+            <path d="m 437.64,-20.48 h 23.52 q 22.56,0 22.56,21.36 V 44.8 h -47.28 v 27.84 q 0,4.08 1.44,5.52 1.44,1.44 5.76,1.44 h 11.04 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 v -9.6 h 21.12 v 12.72 q 0,21.12 -22.32,21.12 h -23.04 q -22.32,0 -22.32,-21.12 V 0.88 q 0,-21.36 22.32,-21.36 z m -1.2,49.44 h 25.92 V 3.52 q 0,-4.08 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -11.76 q -4.32,0 -5.76,1.44 -1.44,1.44 -1.44,5.52 z"/>
+            <path d="m 514.05,-20.48 15.36,98.88 15.6,-98.88 h 21.6 l -21.6,117.12 h -30.96 l -21.6,-117.12 z"/>
+            <path d="m 599.83,-20.48 h 23.52 q 22.56,0 22.56,21.36 V 44.8 h -47.28 v 27.84 q 0,4.08 1.44,5.52 1.44,1.44 5.76,1.44 h 11.04 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 v -9.6 h 21.12 v 12.72 q 0,21.12 -22.32,21.12 h -23.04 q -22.32,0 -22.32,-21.12 V 0.88 q 0,-21.36 22.32,-21.36 z m -1.2,49.44 h 25.92 V 3.52 q 0,-4.08 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -11.76 q -4.32,0 -5.76,1.44 -1.44,1.44 -1.44,5.52 z"/>
+            <path d="m 685.84,96.64 h -21.6 v -160.56 h 21.6 z"/>
+            <path d="m 727.78,-20.48 h 25.68 q 22.32,0 22.32,21.36 V 75.52 q 0,21.12 -22.32,21.12 h -25.68 q -22.08,0 -22.08,-21.12 V 0.88 q 0,-21.36 22.08,-21.36 z m 26.64,92.88 V 3.76 q 0,-4.32 -1.44,-5.76 -1.44,-1.44 -5.76,-1.44 h -13.2 q -4.32,0 -5.76,1.44 -1.2,1.44 -1.2,5.76 V 72.4 q 0,4.32 1.2,5.76 1.44,1.44 5.76,1.44 h 13.2 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 z"/>
+            <path d="m 831.97,-20.48 h 8.4 q 21.84,0 21.84,21.36 V 75.52 q 0,21.12 -21.84,21.12 h -8.4 q -11.76,0 -14.88,-9.36 v 42.48 h -21.6 V -20.48 h 21.6 v 9.36 q 3.12,-9.36 14.88,-9.36 z m 8.64,92.64 V 4 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 70.72 q 0,4.56 1.68,6.48 1.92,1.92 6.24,1.92 h 8.4 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
+            <path d="m 963.34,-20.48 h 8.4 q 21.6,0 21.6,21.36 V 96.64 h -21.6 V 4 q 0,-4.32 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -8.64 q -7.68,0 -7.68,8.4 V 96.64 h -21.6 V 4 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 96.64 h -21.6 v -117.12 h 21.6 v 9.36 q 3.12,-9.36 14.88,-9.36 h 8.4 q 15.36,0 19.92,10.8 2.88,-10.8 16.8,-10.8 z"/>
+            <path d="m 1035.3,-20.48 h 23.52 q 22.56,0 22.56,21.36 V 44.8 h -47.28 v 27.84 q 0,4.08 1.44,5.52 1.44,1.44 5.76,1.44 h 11.04 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 v -9.6 h 21.12 v 12.72 q 0,21.12 -22.32,21.12 h -23.04 q -22.32,0 -22.32,-21.12 V 0.88 q 0,-21.36 22.32,-21.36 z m -1.2,49.44 h 25.92 V 3.52 q 0,-4.08 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -11.76 q -4.32,0 -5.76,1.44 -1.44,1.44 -1.44,5.52 z"/>
+            <path d="m 1136.19,-20.48 h 8.4 q 21.84,0 21.84,21.36 V 96.64 h -21.6 V 4 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 96.64 h -21.6 v -117.12 h 21.6 v 9.36 q 3.12,-9.36 14.88,-9.36 z"/>
+            <path d="m 1226.97,-2.96 h -16.08 V 71.2 q 0,4.32 1.2,5.76 1.44,1.2 5.76,1.2 h 9.12 v 18.48 h -15.36 q -22.56,0 -22.56,-21.12 V -2.96 h -11.04 V -20.48 h 11.04 v -19.92 h 21.84 v 19.92 h 16.08 z"/>
+            <path d="m 1276.95,-53.6 h 52.32 q 22.32,0 22.32,21.12 v 108 q 0,21.12 -22.32,21.12 h -52.32 z m 52.8,126.24 v -102.24 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -23.76 v 116.16 h 23.76 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
+            <path d="m 1417.14,-20.48 h 21.6 v 117.12 h -21.6 v -9.36 q -3.12,9.36 -14.88,9.36 h -8.64 q -21.6,0 -21.6,-21.12 V 0.88 q 0,-21.36 21.6,-21.36 h 8.64 q 11.76,0 14.88,9.36 z m -16.32,99.6 h 8.4 q 4.32,0 6,-1.92 1.92,-1.92 1.92,-6.48 V 5.44 q 0,-4.56 -1.92,-6.48 -1.68,-1.92 -6,-1.92 h -8.4 q -4.32,0 -5.76,1.44 -1.44,1.2 -1.44,5.52 V 72.16 q 0,4.32 1.44,5.76 1.44,1.2 5.76,1.2 z"/>
+            <path d="m 1499.31,-2.96 h -16.08 V 71.2 q 0,4.32 1.2,5.76 1.44,1.2 5.76,1.2 h 9.12 v 18.48 h -15.36 q -22.56,0 -22.56,-21.12 V -2.96 h -11.04 V -20.48 h 11.04 v -19.92 h 21.84 v 19.92 h 16.08 z"/>
+            <path d="m 1555.89,-20.48 h 21.6 v 117.12 h -21.6 v -9.36 q -3.12,9.36 -14.88,9.36 h -8.64 q -21.6,0 -21.6,-21.12 V 0.88 q 0,-21.36 21.6,-21.36 h 8.64 q 11.76,0 14.88,9.36 z m -16.32,99.6 h 8.4 q 4.32,0 6,-1.92 1.92,-1.92 1.92,-6.48 V 5.44 q 0,-4.56 -1.92,-6.48 -1.68,-1.92 -6,-1.92 h -8.4 q -4.32,0 -5.76,1.44 -1.44,1.2 -1.44,5.52 V 72.16 q 0,4.32 1.44,5.76 1.44,1.2 5.76,1.2 z"/>
+            <path d="m 1656.67,79.12 h 37.2 v 17.52 h -58.8 v -150.24 h 21.6 z"/>
+            <path d="m 1749.02,-20.48 h 21.6 v 117.12 h -21.6 v -9.36 q -3.12,9.36 -14.88,9.36 h -8.64 q -21.6,0 -21.6,-21.12 V 0.88 q 0,-21.36 21.6,-21.36 h 8.64 q 11.76,0 14.88,9.36 z m -16.32,99.6 h 8.4 q 4.32,0 6,-1.92 1.92,-1.92 1.92,-6.48 V 5.44 q 0,-4.56 -1.92,-6.48 -1.68,-1.92 -6,-1.92 h -8.4 q -4.32,0 -5.76,1.44 -1.44,1.2 -1.44,5.52 V 72.16 q 0,4.32 1.44,5.76 1.44,1.2 5.76,1.2 z"/>
+            <path d="m 1828.07,-20.72 h 8.4 q 21.84,0 21.84,21.36 V 75.52 q 0,21.12 -21.84,21.12 h -8.4 q -11.76,0 -14.88,-9.36 v 9.36 h -21.6 v -160.56 h 21.6 v 52.56 q 3.12,-9.36 14.88,-9.36 z m 8.64,92.88 V 3.76 q 0,-4.08 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 70.72 q 0,4.56 1.68,6.48 1.92,1.92 6.24,1.92 h 8.4 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
+          </g>
+          <path style="fill:#546a7b" d="m 53.53,197.43 c -3.32,-0.24 -12.64,-0.54 -20.71,-0.67 -23.73,-0.38 -29.22,-0.83 -30.91,-2.53 -0.58,-0.58 -0.62,-0.81 -0.26,-1.59 0.84,-1.85 2.2,-2.15 10.34,-2.28 l 7.41,-0.12 -0.11,-22.68 c -0.11,-22.59 -0.11,-22.69 -0.89,-24.77 -1.24,-3.29 -2.81,-5.32 -7.54,-9.78 -7.09,-6.68 -9.15,-10.45 -9.49,-17.38 -0.47,-9.71 5,-18.06 13.82,-21.08 1.87,-0.64 3.46,-0.82 9.18,-1.06 8.36,-0.35 10.96,-0.93 16.4,-3.63 8.41,-4.18 16.3,-11.05 26.96,-23.48 6.63,-7.73 9.55,-11.95 11.53,-16.66 1.89,-4.5 2.1,-6.27 1.66,-14.26 -0.59,-10.8 0.27,-17.07 3.08,-22.42 2.48,-4.71 8.2,-8.94 14.58,-10.78 3.72,-1.07 11.9,-1.15 15.65,-0.16 7.48,1.99 12.76,6.27 15.83,12.82 2.32,4.94 2.62,6.75 2.45,14.38 -0.06,2.47 -0.1,4.58 -0.13,6.42 -0.15,10.16 0.23,11.63 2.2,15.86 1.62,3.48 3.28,5.72 9.36,12.63 9.52,10.83 21.55,21.3 28.64,24.93 4.94,2.53 7.07,2.84 15.97,2.35 8.83,-0.49 11.32,-0.95 14.71,-2.73 5.47,-2.87 16.2,-14.81 24.63,-27.42 4.41,-6.6 6.63,-12.32 6.04,-15.62 -0.11,-0.61 -0.95,-3.45 -1.88,-6.32 -0.93,-2.87 -1.85,-6.24 -2.05,-7.48 -0.93,-5.75 -0.13,-10.73 2.63,-16.34 1.33,-2.71 2.15,-3.82 4.62,-6.3 2.42,-2.43 3.57,-3.3 5.96,-4.46 4.28,-2.1 7.07,-2.59 13.23,-2.36 2.94,0.11 5.92,0.43 7.14,0.76 6.33,1.71 11.38,5.85 14.23,11.65 2.6,5.31 3.11,7.76 3.14,15.14 0.03,5.95 -0.02,6.38 -0.88,8.61 -1.89,4.9 -3.46,6.82 -12.7,15.58 -3.27,3.1 -4.05,4.05 -5.12,6.27 -2.5,5.17 -2.88,7.98 -3.36,25.16 -0.39,13.89 -0.71,18.16 -1.58,21.07 -0.54,1.81 -2.32,4.29 -2.77,3.85 -0.42,-0.42 -0.85,-14.65 -0.87,-28.67 -0.02,-14.99 -0.24,-17.82 -1.58,-20.59 -1.11,-2.28 -3.49,-4.49 -5.39,-5 -1.89,-0.51 -4.33,0.04 -6.2,1.4 -8.52,6.17 -27.27,30.61 -29.49,38.45 -0.77,2.7 -0.5,6.73 0.68,10.33 1.95,5.95 1.93,9.19 -0.1,14.41 -1.5,3.86 -3.27,6.19 -9.12,12 -5.98,5.94 -7.17,7.65 -8.4,12.06 -0.73,2.64 -0.76,3.43 -0.89,24.06 l -0.13,21.32 h 30.3 30.3 l 0.09,-25.38 c 0.09,-24.39 0.12,-25.4 0.76,-26.11 0.9,-1 2.09,-0.93 2.8,0.16 1.57,2.39 1.69,4.26 1.84,28.59 l 0.14,23.05 9.87,0.1 c 9.4,0.1 9.92,0.14 10.85,0.83 2.04,1.52 1.2,3.29 -1.91,3.99 -3.61,0.81 -15.12,1.37 -28.44,1.38 -8.18,0.01 -17.16,0.22 -21.76,0.51 -10.68,0.69 -164.84,0.68 -174.35,-0.01 z m 50.08,-29.67 c 0.01,-23.57 0.13,-25.89 1.56,-28.06 1.58,-2.41 3.16,-0.9 4.25,4.06 0.46,2.08 0.57,6.15 0.7,24.52 l 0.15,22.02 h 38.64 38.64 l -0.14,-21.67 c -0.18,-27.81 0.03,-26.78 -6.9,-34.21 -6.16,-6.6 -8.14,-9.59 -9.67,-14.54 -0.83,-2.69 -1.44,-8.24 -1.44,-13.15 0,-3.85 -0.56,-6.12 -2.31,-9.33 -3.04,-5.58 -8.31,-11.75 -20.48,-23.92 -12.17,-12.17 -17.18,-16.4 -22.37,-18.87 -5.84,-2.78 -10.43,-1.04 -12.13,4.59 -1.15,3.83 -1.51,8.48 -1.88,24.86 -0.21,9.06 -0.54,17.68 -0.75,19.15 -0.41,2.97 -1.58,5.5 -3.07,6.59 l -0.95,0.7 -0.61,-16.93 c -0.98,-27.34 -1.4,-31.72 -3.47,-35.8 -2.36,-4.67 -6.94,-5.81 -12.54,-3.14 -6.46,3.08 -18.17,13.57 -31,27.77 -7.02,7.76 -9.23,10.58 -11.11,14.17 -2.29,4.36 -3.03,7.04 -3.4,12.26 -0.81,11.47 -1.9,13.91 -9.98,22.37 -5.88,6.15 -6.6,7.5 -6.98,13.14 -0.15,2.2 -0.21,13.44 -0.14,24.98 l 0.14,20.97 h 38.61 38.61 l 0.01,-22.54 z M 27.82,129.43 c 5.77,-2.06 10.09,-7.36 11.06,-13.57 1.26,-8.09 -4.3,-15.87 -12.49,-17.48 -1.35,-0.27 -3.63,-0.36 -6.02,-0.25 -3.54,0.17 -4.04,0.28 -6.45,1.47 -7.4,3.65 -10.53,11.51 -7.79,19.5 1.01,2.95 2.1,4.62 4.42,6.84 3.58,3.41 6.73,4.56 11.94,4.34 2.15,-0.09 4.01,-0.39 5.32,-0.85 z m 166.46,0.49 c 5.19,-0.99 9.24,-4.04 11.48,-8.63 4.74,-9.7 -0.24,-20.85 -10.24,-22.93 -1.12,-0.23 -3.57,-0.33 -5.93,-0.23 -3.65,0.15 -4.24,0.27 -6.44,1.32 -3.3,1.57 -6.7,4.97 -7.85,7.83 -0.72,1.8 -0.83,2.66 -0.82,6.27 0.01,4.77 0.51,6.42 3,9.97 2.32,3.3 5.67,5.57 9.47,6.39 2.83,0.62 4.17,0.62 7.34,0.01 z M 112.5,48.97 c 7.16,-1.83 11.5,-6.22 13.27,-13.43 0.92,-3.72 0.84,-12.81 -0.13,-15.72 -2.43,-7.28 -9.24,-11.86 -18.55,-12.48 -4.78,-0.32 -10.08,1.35 -13.86,4.36 -2.4,1.91 -5.02,5.94 -6.21,9.55 -1.29,3.92 -1.36,9.9 -0.17,13.8 2.31,7.54 7.73,12.88 14.67,14.45 2.81,0.63 7.28,0.42 10.98,-0.52 z m 148.64,0.01 c 3.81,-1.07 8.05,-3.38 10.34,-5.63 8.43,-8.24 5.95,-25.11 -4.73,-32.25 -3.46,-2.32 -6.2,-3.23 -10.36,-3.46 -9.84,-0.54 -17.36,4.47 -20.37,13.58 -0.83,2.5 -0.95,3.41 -0.95,7.21 0,3.84 0.11,4.68 0.96,7.13 1.68,4.88 4.33,8.55 7.88,10.92 5.09,3.4 10.99,4.25 17.23,2.49 z"/>
+          <path style="fill:#62929e" d="m 19.3,119.97 c -3.1,-1.64 -4.33,-5.6 -2.64,-8.48 2.31,-3.94 6.89,-4.81 10.18,-1.92 3.16,2.78 2.26,8.48 -1.64,10.37 -1.9,0.92 -4.19,0.93 -5.9,0.03 z"/>
+          <path style="fill:#62929e" d="m 103.03,37.82 c -3.21,-1.27 -5.77,-4.57 -6.24,-8.05 -0.48,-3.54 1.92,-7.73 5.71,-9.95 3.35,-1.96 8.92,-0.76 11.24,2.44 1.16,1.6 2.06,4.3 2.06,6.17 0,1.86 -0.97,4.82 -2.14,6.51 -2.19,3.19 -6.74,4.42 -10.63,2.88 z"/>
+          <path style="fill:#62929e" d="m 190.47,120.5 c -0.19,-0.06 -0.78,-0.2 -1.31,-0.32 -1.15,-0.25 -3.58,-2.36 -4.28,-3.72 -0.72,-1.38 -0.63,-4.09 0.17,-5.4 1.94,-3.18 6.54,-4.37 9.47,-2.44 1.39,0.91 2.4,3.03 2.40,5.07 0,3.62 -1.85,6 -5.22,6.73 -0.48,0.1 -1.03,0.14 -1.22,0.08 z"/>
+          <path style="fill:#62929e" d="m 253.01,37.86 c -3.71,-1.28 -6.32,-4.98 -6.32,-8.98 -0.01,-4.07 2.05,-7.49 5.61,-9.35 1.42,-0.74 4.79,-0.83 6.7,-0.18 4.45,1.53 7.1,7.33 5.63,12.37 -0.8,2.75 -3.45,5.46 -6.12,6.25 -2.35,0.7 -3.2,0.68 -5.5,-0.11 z"/>
+        `);
+
+      // Legend Container - can fill or shrink based on content
       const legendContainer = legendWrapper.append('div')
-        .style('max-height', (innerHeight - 60) + 'px')
-        .style('overflow-y', 'auto')
+        .style('display', 'flex')
+        .style('flex-direction', 'column')
+        .style('overflow', 'hidden')
         .style('background', 'white')
         .style('border-radius', '4px')
         .style('border', '1px solid #eee');
@@ -693,17 +842,71 @@
           updateAllTrajectories();
         });
 
-      // Legend items container
+      // Marker key - shows what start/end markers mean
+      const markerKey = legendContainer.append('div')
+        .style('display', 'flex')
+        .style('justify-content', 'center')
+        .style('align-items', 'center')
+        .style('gap', '6px')
+        .style('padding', '8px 12px')
+        .style('border-bottom', '1px solid #eee')
+        .style('font-size', '11px')
+        .style('color', UI_COLORS.textLight);
+
+      // 2013 label
+      markerKey.append('span').text('2013');
+
+      // Visual: circle —— line —— triangle
+      const keySvg = markerKey.append('svg')
+        .attr('width', '60')
+        .attr('height', '14')
+        .attr('viewBox', '0 0 60 14');
+
+      // Start circle (solid)
+      keySvg.append('circle')
+        .attr('cx', '6')
+        .attr('cy', '7')
+        .attr('r', '4')
+        .style('fill', '#666');
+
+      // Connecting line (extends under the triangle)
+      keySvg.append('line')
+        .attr('x1', '10')
+        .attr('y1', '7')
+        .attr('x2', '54')
+        .attr('y2', '7')
+        .style('stroke', '#666')
+        .style('stroke-width', '1.5');
+
+      // End triangle (hollow, white fill covers line overlap)
+      keySvg.append('path')
+        .attr('d', 'M54,2 L59,12 L49,12 Z')
+        .style('fill', 'white')
+        .style('stroke', '#666')
+        .style('stroke-width', '1.5');
+
+      // 2023 label
+      markerKey.append('span').text('2023');
+
+      // Legend items container - scrollable, fills remaining space
       const legendItemsContainer = legendContainer.append('div')
-        .attr('class', 'legend-items');
+        .attr('class', 'legend-items')
+        .style('flex', '1')
+        .style('overflow-y', 'auto');
 
       // Build legend items
       function rebuildLegend() {
         legendItemsContainer.selectAll('*').remove();
 
         if (legendMode === 'country') {
+          // Country mode: full height with scroll
+          legendContainer.style('flex', '1');
+          legendItemsContainer.style('flex', '1').style('overflow-y', 'auto');
           buildCountryLegend();
         } else {
+          // Region mode: shrink to fit content
+          legendContainer.style('flex', '0 1 auto');
+          legendItemsContainer.style('flex', '0 1 auto').style('overflow-y', 'visible');
           buildRegionLegend();
         }
       }
@@ -714,7 +917,7 @@
           if (!countries.has(city.iso3)) {
             countries.set(city.iso3, {
               iso3: city.iso3,
-              name: city.country,
+              name: ISO3_TO_NAME[city.iso3] || city.country || city.iso3,
             });
           }
         });
@@ -828,9 +1031,10 @@
         item.on('mouseenter', function() {
           d3.select(this).style('background-color', 'rgba(0,0,0,0.05)');
 
-          chartArea.selectAll('.city-group').each(function() {
+          linesLayer.selectAll('.city-group').each(function() {
             const g = d3.select(this);
             const city = g.datum();
+            const mg = getMarkerGroup(city.id);
 
             let isHoveredItem;
             if (type === 'country') {
@@ -842,17 +1046,35 @@
             const cityIsActive = isHighlighted(city.iso3);
 
             if (isHoveredItem) {
+              // If not highlighted, switch to solid color
+              if (!cityIsActive) {
+                g.select('.trajectory-line')
+                  .style('stroke', UI_COLORS.mutedSolid);
+                mg.select('.marker-start')
+                  .style('fill', UI_COLORS.mutedSolid);
+                mg.select('.marker-end')
+                  .style('stroke', UI_COLORS.mutedSolid);
+              }
               g.select('.trajectory-line')
                 .style('stroke-width', 3)
                 .style('stroke-opacity', 1);
+              mg.select('.marker-start')
+                .style('opacity', 1);
+              mg.select('.marker-end')
+                .style('opacity', 1);
               g.raise();
+              mg.raise();
             } else if (cityIsActive) {
               // Active cities are NOT affected by legend hover - keep full visibility
               // (do nothing - they maintain their current appearance)
             } else {
-              // Dim non-active cities but keep them somewhat visible
+              // Dim non-active cities and their markers
               g.select('.trajectory-line')
                 .style('stroke-opacity', 0.15);
+              mg.select('.marker-start')
+                .style('opacity', 0.15);
+              mg.select('.marker-end')
+                .style('opacity', 0.15);
             }
           });
         });
@@ -892,41 +1114,6 @@
 
       // Build initial legend
       rebuildLegend();
-
-      // DDL Branding below legend
-      const ddlBranding = legendWrapper.append('div')
-        .attr('class', 'ddl-branding');
-
-      ddlBranding.append('svg')
-        .attr('viewBox', '0 0 1877 207')
-        .attr('xmlns', 'http://www.w3.org/2000/svg')
-        .html(`
-          <g transform="translate(18.73,77.32)" style="fill:#393d3f">
-            <path d="m 319.3,-53.6 h 52.32 q 22.32,0 22.32,21.12 v 108 q 0,21.12 -22.32,21.12 h -52.32 z m 52.8,126.24 v -102.24 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -23.76 v 116.16 h 23.76 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
-            <path d="m 437.64,-20.48 h 23.52 q 22.56,0 22.56,21.36 V 44.8 h -47.28 v 27.84 q 0,4.08 1.44,5.52 1.44,1.44 5.76,1.44 h 11.04 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 v -9.6 h 21.12 v 12.72 q 0,21.12 -22.32,21.12 h -23.04 q -22.32,0 -22.32,-21.12 V 0.88 q 0,-21.36 22.32,-21.36 z m -1.2,49.44 h 25.92 V 3.52 q 0,-4.08 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -11.76 q -4.32,0 -5.76,1.44 -1.44,1.44 -1.44,5.52 z"/>
-            <path d="m 514.05,-20.48 15.36,98.88 15.6,-98.88 h 21.6 l -21.6,117.12 h -30.96 l -21.6,-117.12 z"/>
-            <path d="m 599.83,-20.48 h 23.52 q 22.56,0 22.56,21.36 V 44.8 h -47.28 v 27.84 q 0,4.08 1.44,5.52 1.44,1.44 5.76,1.44 h 11.04 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 v -9.6 h 21.12 v 12.72 q 0,21.12 -22.32,21.12 h -23.04 q -22.32,0 -22.32,-21.12 V 0.88 q 0,-21.36 22.32,-21.36 z m -1.2,49.44 h 25.92 V 3.52 q 0,-4.08 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -11.76 q -4.32,0 -5.76,1.44 -1.44,1.44 -1.44,5.52 z"/>
-            <path d="m 685.84,96.64 h -21.6 v -160.56 h 21.6 z"/>
-            <path d="m 727.78,-20.48 h 25.68 q 22.32,0 22.32,21.36 V 75.52 q 0,21.12 -22.32,21.12 h -25.68 q -22.08,0 -22.08,-21.12 V 0.88 q 0,-21.36 22.08,-21.36 z m 26.64,92.88 V 3.76 q 0,-4.32 -1.44,-5.76 -1.44,-1.44 -5.76,-1.44 h -13.2 q -4.32,0 -5.76,1.44 -1.2,1.44 -1.2,5.76 V 72.4 q 0,4.32 1.2,5.76 1.44,1.44 5.76,1.44 h 13.2 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 z"/>
-            <path d="m 831.97,-20.48 h 8.4 q 21.84,0 21.84,21.36 V 75.52 q 0,21.12 -21.84,21.12 h -8.4 q -11.76,0 -14.88,-9.36 v 42.48 h -21.6 V -20.48 h 21.6 v 9.36 q 3.12,-9.36 14.88,-9.36 z m 8.64,92.64 V 4 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 70.72 q 0,4.56 1.68,6.48 1.92,1.92 6.24,1.92 h 8.4 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
-            <path d="m 963.34,-20.48 h 8.4 q 21.6,0 21.6,21.36 V 96.64 h -21.6 V 4 q 0,-4.32 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -8.64 q -7.68,0 -7.68,8.4 V 96.64 h -21.6 V 4 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 96.64 h -21.6 v -117.12 h 21.6 v 9.36 q 3.12,-9.36 14.88,-9.36 h 8.4 q 15.36,0 19.92,10.8 2.88,-10.8 16.8,-10.8 z"/>
-            <path d="m 1035.3,-20.48 h 23.52 q 22.56,0 22.56,21.36 V 44.8 h -47.28 v 27.84 q 0,4.08 1.44,5.52 1.44,1.44 5.76,1.44 h 11.04 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 v -9.6 h 21.12 v 12.72 q 0,21.12 -22.32,21.12 h -23.04 q -22.32,0 -22.32,-21.12 V 0.88 q 0,-21.36 22.32,-21.36 z m -1.2,49.44 h 25.92 V 3.52 q 0,-4.08 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -11.76 q -4.32,0 -5.76,1.44 -1.44,1.44 -1.44,5.52 z"/>
-            <path d="m 1136.19,-20.48 h 8.4 q 21.84,0 21.84,21.36 V 96.64 h -21.6 V 4 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 96.64 h -21.6 v -117.12 h 21.6 v 9.36 q 3.12,-9.36 14.88,-9.36 z"/>
-            <path d="m 1226.97,-2.96 h -16.08 V 71.2 q 0,4.32 1.2,5.76 1.44,1.2 5.76,1.2 h 9.12 v 18.48 h -15.36 q -22.56,0 -22.56,-21.12 V -2.96 h -11.04 V -20.48 h 11.04 v -19.92 h 21.84 v 19.92 h 16.08 z"/>
-            <path d="m 1276.95,-53.6 h 52.32 q 22.32,0 22.32,21.12 v 108 q 0,21.12 -22.32,21.12 h -52.32 z m 52.8,126.24 v -102.24 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -23.76 v 116.16 h 23.76 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
-            <path d="m 1417.14,-20.48 h 21.6 v 117.12 h -21.6 v -9.36 q -3.12,9.36 -14.88,9.36 h -8.64 q -21.6,0 -21.6,-21.12 V 0.88 q 0,-21.36 21.6,-21.36 h 8.64 q 11.76,0 14.88,9.36 z m -16.32,99.6 h 8.4 q 4.32,0 6,-1.92 1.92,-1.92 1.92,-6.48 V 5.44 q 0,-4.56 -1.92,-6.48 -1.68,-1.92 -6,-1.92 h -8.4 q -4.32,0 -5.76,1.44 -1.44,1.2 -1.44,5.52 V 72.16 q 0,4.32 1.44,5.76 1.44,1.2 5.76,1.2 z"/>
-            <path d="m 1499.31,-2.96 h -16.08 V 71.2 q 0,4.32 1.2,5.76 1.44,1.2 5.76,1.2 h 9.12 v 18.48 h -15.36 q -22.56,0 -22.56,-21.12 V -2.96 h -11.04 V -20.48 h 11.04 v -19.92 h 21.84 v 19.92 h 16.08 z"/>
-            <path d="m 1555.89,-20.48 h 21.6 v 117.12 h -21.6 v -9.36 q -3.12,9.36 -14.88,9.36 h -8.64 q -21.6,0 -21.6,-21.12 V 0.88 q 0,-21.36 21.6,-21.36 h 8.64 q 11.76,0 14.88,9.36 z m -16.32,99.6 h 8.4 q 4.32,0 6,-1.92 1.92,-1.92 1.92,-6.48 V 5.44 q 0,-4.56 -1.92,-6.48 -1.68,-1.92 -6,-1.92 h -8.4 q -4.32,0 -5.76,1.44 -1.44,1.2 -1.44,5.52 V 72.16 q 0,4.32 1.44,5.76 1.44,1.2 5.76,1.2 z"/>
-            <path d="m 1656.67,79.12 h 37.2 v 17.52 h -58.8 v -150.24 h 21.6 z"/>
-            <path d="m 1749.02,-20.48 h 21.6 v 117.12 h -21.6 v -9.36 q -3.12,9.36 -14.88,9.36 h -8.64 q -21.6,0 -21.6,-21.12 V 0.88 q 0,-21.36 21.6,-21.36 h 8.64 q 11.76,0 14.88,9.36 z m -16.32,99.6 h 8.4 q 4.32,0 6,-1.92 1.92,-1.92 1.92,-6.48 V 5.44 q 0,-4.56 -1.92,-6.48 -1.68,-1.92 -6,-1.92 h -8.4 q -4.32,0 -5.76,1.44 -1.44,1.2 -1.44,5.52 V 72.16 q 0,4.32 1.44,5.76 1.44,1.2 5.76,1.2 z"/>
-            <path d="m 1828.07,-20.72 h 8.4 q 21.84,0 21.84,21.36 V 75.52 q 0,21.12 -21.84,21.12 h -8.4 q -11.76,0 -14.88,-9.36 v 9.36 h -21.6 v -160.56 h 21.6 v 52.56 q 3.12,-9.36 14.88,-9.36 z m 8.64,92.88 V 3.76 q 0,-4.08 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 70.72 q 0,4.56 1.68,6.48 1.92,1.92 6.24,1.92 h 8.4 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
-          </g>
-          <path style="fill:#546a7b" d="m 53.53,197.43 c -3.32,-0.24 -12.64,-0.54 -20.71,-0.67 -23.73,-0.38 -29.22,-0.83 -30.91,-2.53 -0.58,-0.58 -0.62,-0.81 -0.26,-1.59 0.84,-1.85 2.2,-2.15 10.34,-2.28 l 7.41,-0.12 -0.11,-22.68 c -0.11,-22.59 -0.11,-22.69 -0.89,-24.77 -1.24,-3.29 -2.81,-5.32 -7.54,-9.78 -7.09,-6.68 -9.15,-10.45 -9.49,-17.38 -0.47,-9.71 5,-18.06 13.82,-21.08 1.87,-0.64 3.46,-0.82 9.18,-1.06 8.36,-0.35 10.96,-0.93 16.4,-3.63 8.41,-4.18 16.3,-11.05 26.96,-23.48 6.63,-7.73 9.55,-11.95 11.53,-16.66 1.89,-4.5 2.1,-6.27 1.66,-14.26 -0.59,-10.8 0.27,-17.07 3.08,-22.42 2.48,-4.71 8.2,-8.94 14.58,-10.78 3.72,-1.07 11.9,-1.15 15.65,-0.16 7.48,1.99 12.76,6.27 15.83,12.82 2.32,4.94 2.62,6.75 2.45,14.38 -0.06,2.47 -0.1,4.58 -0.13,6.42 -0.15,10.16 0.23,11.63 2.2,15.86 1.62,3.48 3.28,5.72 9.36,12.63 9.52,10.83 21.55,21.3 28.64,24.93 4.94,2.53 7.07,2.84 15.97,2.35 8.83,-0.49 11.32,-0.95 14.71,-2.73 5.47,-2.87 16.2,-14.81 24.63,-27.42 4.41,-6.6 6.63,-12.32 6.04,-15.62 -0.11,-0.61 -0.95,-3.45 -1.88,-6.32 -0.93,-2.87 -1.85,-6.24 -2.05,-7.48 -0.93,-5.75 -0.13,-10.73 2.63,-16.34 1.33,-2.71 2.15,-3.82 4.62,-6.3 2.42,-2.43 3.57,-3.3 5.96,-4.46 4.28,-2.1 7.07,-2.59 13.23,-2.36 2.94,0.11 5.92,0.43 7.14,0.76 6.33,1.71 11.38,5.85 14.23,11.65 2.6,5.31 3.11,7.76 3.14,15.14 0.03,5.95 -0.02,6.38 -0.88,8.61 -1.89,4.9 -3.46,6.82 -12.7,15.58 -3.27,3.1 -4.05,4.05 -5.12,6.27 -2.5,5.17 -2.88,7.98 -3.36,25.16 -0.39,13.89 -0.71,18.16 -1.58,21.07 -0.54,1.81 -2.32,4.29 -2.77,3.85 -0.42,-0.42 -0.85,-14.65 -0.87,-28.67 -0.02,-14.99 -0.24,-17.82 -1.58,-20.59 -1.11,-2.28 -3.49,-4.49 -5.39,-5 -1.89,-0.51 -4.33,0.04 -6.2,1.4 -8.52,6.17 -27.27,30.61 -29.49,38.45 -0.77,2.7 -0.5,6.73 0.68,10.33 1.95,5.95 1.93,9.19 -0.1,14.41 -1.5,3.86 -3.27,6.19 -9.12,12 -5.98,5.94 -7.17,7.65 -8.4,12.06 -0.73,2.64 -0.76,3.43 -0.89,24.06 l -0.13,21.32 h 30.3 30.3 l 0.09,-25.38 c 0.09,-24.39 0.12,-25.4 0.76,-26.11 0.9,-1 2.09,-0.93 2.8,0.16 1.57,2.39 1.69,4.26 1.84,28.59 l 0.14,23.05 9.87,0.1 c 9.4,0.1 9.92,0.14 10.85,0.83 2.04,1.52 1.2,3.29 -1.91,3.99 -3.61,0.81 -15.12,1.37 -28.44,1.38 -8.18,0.01 -17.16,0.22 -21.76,0.51 -10.68,0.69 -164.84,0.68 -174.35,-0.01 z m 50.08,-29.67 c 0.01,-23.57 0.13,-25.89 1.56,-28.06 1.58,-2.41 3.16,-0.9 4.25,4.06 0.46,2.08 0.57,6.15 0.7,24.52 l 0.15,22.02 h 38.64 38.64 l -0.14,-21.67 c -0.18,-27.81 0.03,-26.78 -6.9,-34.21 -6.16,-6.6 -8.14,-9.59 -9.67,-14.54 -0.83,-2.69 -1.44,-8.24 -1.44,-13.15 0,-3.85 -0.56,-6.12 -2.31,-9.33 -3.04,-5.58 -8.31,-11.75 -20.48,-23.92 -12.17,-12.17 -17.18,-16.4 -22.37,-18.87 -5.84,-2.78 -10.43,-1.04 -12.13,4.59 -1.15,3.83 -1.51,8.48 -1.88,24.86 -0.21,9.06 -0.54,17.68 -0.75,19.15 -0.41,2.97 -1.58,5.5 -3.07,6.59 l -0.95,0.7 -0.61,-16.93 c -0.98,-27.34 -1.4,-31.72 -3.47,-35.8 -2.36,-4.67 -6.94,-5.81 -12.54,-3.14 -6.46,3.08 -18.17,13.57 -31,27.77 -7.02,7.76 -9.23,10.58 -11.11,14.17 -2.29,4.36 -3.03,7.04 -3.4,12.26 -0.81,11.47 -1.9,13.91 -9.98,22.37 -5.88,6.15 -6.6,7.5 -6.98,13.14 -0.15,2.2 -0.21,13.44 -0.14,24.98 l 0.14,20.97 h 38.61 38.61 l 0.01,-22.54 z M 27.82,129.43 c 5.77,-2.06 10.09,-7.36 11.06,-13.57 1.26,-8.09 -4.3,-15.87 -12.49,-17.48 -1.35,-0.27 -3.63,-0.36 -6.02,-0.25 -3.54,0.17 -4.04,0.28 -6.45,1.47 -7.4,3.65 -10.53,11.51 -7.79,19.5 1.01,2.95 2.1,4.62 4.42,6.84 3.58,3.41 6.73,4.56 11.94,4.34 2.15,-0.09 4.01,-0.39 5.32,-0.85 z m 166.46,0.49 c 5.19,-0.99 9.24,-4.04 11.48,-8.63 4.74,-9.7 -0.24,-20.85 -10.24,-22.93 -1.12,-0.23 -3.57,-0.33 -5.93,-0.23 -3.65,0.15 -4.24,0.27 -6.44,1.32 -3.3,1.57 -6.7,4.97 -7.85,7.83 -0.72,1.8 -0.83,2.66 -0.82,6.27 0.01,4.77 0.51,6.42 3,9.97 2.32,3.3 5.67,5.57 9.47,6.39 2.83,0.62 4.17,0.62 7.34,0.01 z M 112.5,48.97 c 7.16,-1.83 11.5,-6.22 13.27,-13.43 0.92,-3.72 0.84,-12.81 -0.13,-15.72 -2.43,-7.28 -9.24,-11.86 -18.55,-12.48 -4.78,-0.32 -10.08,1.35 -13.86,4.36 -2.4,1.91 -5.02,5.94 -6.21,9.55 -1.29,3.92 -1.36,9.9 -0.17,13.8 2.31,7.54 7.73,12.88 14.67,14.45 2.81,0.63 7.28,0.42 10.98,-0.52 z m 148.64,0.01 c 3.81,-1.07 8.05,-3.38 10.34,-5.63 8.43,-8.24 5.95,-25.11 -4.73,-32.25 -3.46,-2.32 -6.2,-3.23 -10.36,-3.46 -9.84,-0.54 -17.36,4.47 -20.37,13.58 -0.83,2.5 -0.95,3.41 -0.95,7.21 0,3.84 0.11,4.68 0.96,7.13 1.68,4.88 4.33,8.55 7.88,10.92 5.09,3.4 10.99,4.25 17.23,2.49 z"/>
-          <path style="fill:#62929e" d="m 19.3,119.97 c -3.1,-1.64 -4.33,-5.6 -2.64,-8.48 2.31,-3.94 6.89,-4.81 10.18,-1.92 3.16,2.78 2.26,8.48 -1.64,10.37 -1.9,0.92 -4.19,0.93 -5.9,0.03 z"/>
-          <path style="fill:#62929e" d="m 103.03,37.82 c -3.21,-1.27 -5.77,-4.57 -6.24,-8.05 -0.48,-3.54 1.92,-7.73 5.71,-9.95 3.35,-1.96 8.92,-0.76 11.24,2.44 1.16,1.6 2.06,4.3 2.06,6.17 0,1.86 -0.97,4.82 -2.14,6.51 -2.19,3.19 -6.74,4.42 -10.63,2.88 z"/>
-          <path style="fill:#62929e" d="m 190.47,120.5 c -0.19,-0.06 -0.78,-0.2 -1.31,-0.32 -1.15,-0.25 -3.58,-2.36 -4.28,-3.72 -0.72,-1.38 -0.63,-4.09 0.17,-5.4 1.94,-3.18 6.54,-4.37 9.47,-2.44 1.39,0.91 2.4,3.03 2.40,5.07 0,3.62 -1.85,6 -5.22,6.73 -0.48,0.1 -1.03,0.14 -1.22,0.08 z"/>
-          <path style="fill:#62929e" d="m 253.01,37.86 c -3.71,-1.28 -6.32,-4.98 -6.32,-8.98 -0.01,-4.07 2.05,-7.49 5.61,-9.35 1.42,-0.74 4.79,-0.83 6.7,-0.18 4.45,1.53 7.1,7.33 5.63,12.37 -0.8,2.75 -3.45,5.46 -6.12,6.25 -2.35,0.7 -3.2,0.68 -5.5,-0.11 z"/>
-        `);
 
       // Search with dropdown
       const searchWrapper = container.insert('div', 'svg')
@@ -1019,9 +1206,6 @@
 
           g.select('.marker-end')
             .style('opacity', isSelected ? 1 : 0.2);
-
-          g.selectAll('.year-label')
-            .style('opacity', isSelected ? 1 : 0);
 
           if (isSelected) {
             g.raise();
@@ -1123,9 +1307,6 @@
 
           g.select('.marker-end')
             .style('opacity', match ? 0.9 : 0.2);
-
-          g.selectAll('.year-label')
-            .style('opacity', 0);
 
           if (match) {
             g.raise();
