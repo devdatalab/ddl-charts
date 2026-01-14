@@ -1185,6 +1185,31 @@
         return text.replace(regex, '<strong style="color: #1E88E5;">$1</strong>');
       }
 
+      // Highlight a single city (used for dropdown hover preview)
+      function highlightSingleCity(city) {
+        linesLayer.selectAll('.city-group').each(function() {
+          const g = d3.select(this);
+          const c = g.datum();
+          const mg = getMarkerGroup(c.id);
+          const isTarget = c.id === city.id;
+
+          g.select('.trajectory-line')
+            .style('stroke-opacity', isTarget ? 1 : 0.1)
+            .style('stroke-width', isTarget ? 4 : 1.5);
+
+          mg.select('.marker-start')
+            .style('opacity', isTarget ? 1 : 0.1);
+
+          mg.select('.marker-end')
+            .style('opacity', isTarget ? 1 : 0.1);
+
+          if (isTarget) {
+            g.raise();
+            mg.raise();
+          }
+        });
+      }
+
       function selectCity(city) {
         selectedCity = city;
         searchInput.property('value', city.name);
@@ -1192,27 +1217,7 @@
         clearBtn.style('display', 'inline');
 
         // Highlight only this city
-        linesLayer.selectAll('.city-group').each(function() {
-          const g = d3.select(this);
-          const c = g.datum();
-          const mg = getMarkerGroup(c.id);
-          const isSelected = c.id === city.id;
-
-          g.select('.trajectory-line')
-            .style('stroke-opacity', isSelected ? 1 : 0.15)
-            .style('stroke-width', isSelected ? 4 : 1.5);
-
-          mg.select('.marker-start')
-            .style('opacity', isSelected ? 1 : 0.2);
-
-          mg.select('.marker-end')
-            .style('opacity', isSelected ? 1 : 0.2);
-
-          if (isSelected) {
-            g.raise();
-            mg.raise();
-          }
-        });
+        highlightSingleCity(city);
       }
 
       function updateDropdown(term) {
@@ -1254,13 +1259,23 @@
             .style('transition', 'background 0.1s ease')
             .on('mouseenter', function() {
               d3.select(this).style('background', '#f5f5f5');
+              // Highlight this city's trajectory
+              highlightSingleCity(city);
+              showTooltip(city);
             })
             .on('mouseleave', function() {
               d3.select(this).style('background', 'white');
+              // Restore search preview (all matching cities)
+              const term = searchInput.property('value');
+              if (term) {
+                performSearch(term);
+              }
+              hideTooltip();
             })
             .on('mousedown', function(event) {
               event.preventDefault(); // Prevent blur before click registers
               selectCity(city);
+              showTooltip(city);
             });
 
           item.append('div')
