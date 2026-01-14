@@ -394,7 +394,8 @@
       const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
       // Dimensions - responsive based on screen size
-      const width = containerWidth - (isMobile ? 24 : 40);
+      // Desktop/tablet: cap width at 1100px to prevent legend overlap
+      const width = isMobile ? containerWidth - 24 : Math.min(containerWidth - 40, 1100);
       const height = isMobile ? 320 : (isTablet ? 450 : 650);  // Slightly taller on mobile
       const margin = isMobile
         ? { top: 20, right: 20, bottom: 60, left: 45 }  // More bottom margin for axis label
