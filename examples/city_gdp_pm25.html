@@ -133,6 +133,67 @@
       color: white;
       border-color: #546a7b;
     }
+
+    /* Tablet responsiveness */
+    @media (max-width: 1024px) {
+      .page-header h1 {
+        font-size: 20px;
+      }
+
+      .page-header p {
+        font-size: 12px;
+      }
+
+      .ddl-branding {
+        display: none !important;
+      }
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+
+      .page-header {
+        margin-bottom: 12px;
+      }
+
+      .page-header h1 {
+        font-size: 16px;
+      }
+
+      .page-header p {
+        font-size: 10px;
+        line-height: 1.4;
+      }
+
+      #chart-container {
+        padding: 10px;
+      }
+
+      .ddl-branding {
+        display: none !important;
+      }
+
+      .legend-btn {
+        padding: 10px 16px;
+        font-size: 14px;
+      }
+
+      .mode-btn {
+        padding: 10px 14px;
+        font-size: 14px;
+      }
+
+      .legend-mode-toggle {
+        padding: 6px 8px;
+      }
+
+      .legend-controls {
+        padding: 6px 8px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -322,16 +383,41 @@
 
       const data = await loadData();
 
-      // Dimensions
+      // Detect mobile and touch devices using VIEWPORT dimensions
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
       const containerWidth = container.node().getBoundingClientRect().width;
-      const width = Math.min(containerWidth - 40, 1100);
-      const height = 650;
-      const margin = { top: 30, right: 220, bottom: 70, left: 90 };
+
+      // Mobile: narrow width OR landscape phone (wide but very short)
+      const isMobile = viewportWidth <= 600 || (viewportWidth <= 900 && viewportHeight <= 500);
+      const isTablet = !isMobile && viewportWidth <= 1024;
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+      // Dimensions - responsive based on screen size
+      const width = containerWidth - (isMobile ? 24 : 40);
+      const height = isMobile ? 320 : (isTablet ? 450 : 650);  // Slightly taller on mobile
+      const margin = isMobile
+        ? { top: 20, right: 20, bottom: 60, left: 45 }  // More bottom margin for axis label
+        : isTablet
+          ? { top: 25, right: 180, bottom: 60, left: 70 }
+          : { top: 30, right: 220, bottom: 70, left: 90 };
       const innerWidth = width - margin.left - margin.right;
       const innerHeight = height - margin.top - margin.bottom;
 
-      // Create SVG
-      const svg = container
+      // On mobile, we'll create a wrapper for the chart area to manage layout
+      // The container keeps position: relative for absolutely positioned elements
+      let chartWrapper;
+      if (isMobile) {
+        // Create a wrapper div for the SVG that will be positioned relatively
+        chartWrapper = container.append('div')
+          .attr('class', 'chart-wrapper-mobile')
+          .style('position', 'relative')
+          .style('width', '100%');
+      }
+
+      // Create SVG - append to wrapper on mobile, container on desktop
+      const svgParent = isMobile ? chartWrapper : container;
+      const svg = svgParent
         .append('svg')
         .attr('width', width)
         .attr('height', height)
@@ -350,8 +436,18 @@
         .domain([data.bounds.pm25.min * 0.9, data.bounds.pm25.max * 1.1])
         .range([innerHeight, 0]);
 
-      const xTickValues = [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000];
-      const yTickValues = [5, 10, 20, 50, 100, 200];
+      // Fewer tick values on mobile/tablet for readability
+      const xTickValues = isMobile
+        ? [1000, 10000, 100000]
+        : isTablet
+          ? [1000, 5000, 20000, 100000]
+          : [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000];
+      const yTickValues = isMobile
+        ? [10, 50, 100]
+        : isTablet
+          ? [10, 20, 50, 100]
+          : [5, 10, 20, 50, 100, 200];
+      const axisFontSize = isMobile ? '9px' : (isTablet ? '10px' : '11px');
 
       // Gridlines (OWID-style, rendered behind data)
       // Skip first tick value to avoid gridlines on the axes
@@ -392,33 +488,34 @@
         .call(g => g.selectAll('.tick line').attr('stroke', '#ccc'))
         .call(g => g.select('.tick:first-of-type line').remove())  // Remove first tick mark
         .selectAll('text')
-        .style('font-size', '11px')
+        .style('font-size', axisFontSize)
         .style('fill', UI_COLORS.text);
 
       chartArea.append('g')
         .attr('class', 'y-axis')
         .call(d3.axisLeft(yScale)
-          .tickValues(yTickValues.slice(1))  // Skip 5 to avoid overlap with x-axis
+          .tickValues(isMobile ? yTickValues : yTickValues.slice(1))  // Skip 5 on desktop to avoid overlap
           .tickFormat(d => d)
           .tickSize(5)
         )
         .call(g => g.select('.domain').attr('stroke', '#ccc'))
         .call(g => g.selectAll('.tick line').attr('stroke', '#ccc'))
         .selectAll('text')
-        .style('font-size', '11px')
+        .style('font-size', axisFontSize)
         .style('fill', UI_COLORS.text);
 
       // Create layer groups - markers on top of lines, both on top of gridlines
       const linesLayer = chartArea.append('g').attr('class', 'lines-layer');
       const markersLayer = chartArea.append('g').attr('class', 'markers-layer');
 
-      // X-axis label with info tooltip
-      const xAxisLabel = container.append('div')
+      // X-axis label with info tooltip - position relative to chart wrapper on mobile
+      const xAxisParent = isMobile ? chartWrapper : container;
+      const xAxisLabel = xAxisParent.append('div')
         .style('position', 'absolute')
         .style('left', (margin.left + innerWidth / 2) + 'px')
-        .style('bottom', (margin.bottom - 20) + 'px')
+        .style('bottom', isMobile ? '8px' : (margin.bottom - 20) + 'px')  // Fixed position on mobile to avoid tick overlap
         .style('transform', 'translateX(-50%)')
-        .style('font-size', '13px')
+        .style('font-size', isMobile ? '10px' : (isTablet ? '11px' : '13px'))
         .style('color', UI_COLORS.text);
 
       xAxisLabel
@@ -450,39 +547,42 @@
 
       // Y-axis label with info tooltip (using SVG for proper rotation)
       const yLabelGroup = svg.append('g')
-        .attr('transform', `translate(50, ${margin.top + innerHeight / 2})`);
+        .attr('transform', `translate(${isMobile ? 12 : (isTablet ? 18 : 50)}, ${margin.top + innerHeight / 2})`);
 
       const yLabelText = yLabelGroup.append('text')
         .attr('transform', 'rotate(-90)')
         .attr('text-anchor', 'middle')
-        .style('font-size', '13px')
+        .style('font-size', isMobile ? '10px' : (isTablet ? '11px' : '13px'))
         .style('fill', UI_COLORS.text)
-        .text('PM2.5 Pollution (μg/m³)');
+        .text(isMobile || isTablet ? 'PM2.5 (μg/m³)' : 'PM2.5 Pollution (μg/m³)');
 
-      // Y-axis tooltip (HTML overlay, positioned near label)
-      const yTooltip = container.append('div')
-        .style('position', 'absolute')
-        .style('left', '30px')
-        .style('top', (margin.top + innerHeight / 2 - 70) + 'px')
-        .style('background', 'rgba(50, 50, 50, 0.95)')
-        .style('color', 'white')
-        .style('padding', '10px 14px')
-        .style('border-radius', '4px')
-        .style('font-size', '12px')
-        .style('line-height', '1.5')
-        .style('width', '260px')
-        .style('text-align', 'left')
-        .style('opacity', '0')
-        .style('pointer-events', 'none')
-        .style('transition', 'opacity 0.15s ease')
-        .style('z-index', '1000')
-        .html('<strong>PM2.5 (Worst 3-Month Mean)</strong><br>Fine particulate matter ≤2.5 micrometers in diameter. Shows average concentration during the three most polluted months. PM2.5 penetrates deep into lungs and bloodstream. WHO guideline: &lt;5 μg/m³ annual mean.');
+      // Y-axis tooltip (HTML overlay, positioned near label) - hide on mobile
+      let yTooltip;
+      if (!isMobile) {
+        yTooltip = container.append('div')
+          .style('position', 'absolute')
+          .style('left', '30px')
+          .style('top', (margin.top + innerHeight / 2 - 70) + 'px')
+          .style('background', 'rgba(50, 50, 50, 0.95)')
+          .style('color', 'white')
+          .style('padding', '10px 14px')
+          .style('border-radius', '4px')
+          .style('font-size', '12px')
+          .style('line-height', '1.5')
+          .style('width', '260px')
+          .style('text-align', 'left')
+          .style('opacity', '0')
+          .style('pointer-events', 'none')
+          .style('transition', 'opacity 0.15s ease')
+          .style('z-index', '1000')
+          .html('<strong>PM2.5 (Worst 3-Month Mean)</strong><br>Fine particulate matter ≤2.5 micrometers in diameter. Shows average concentration during the three most polluted months. PM2.5 penetrates deep into lungs and bloodstream. WHO guideline: &lt;5 μg/m³ annual mean.');
 
-      // Show tooltip on hover over the entire label group
-      yLabelGroup
-        .style('cursor', 'help')
-        .on('mouseenter', () => yTooltip.style('opacity', '1'))
-        .on('mouseleave', () => yTooltip.style('opacity', '0'));
+        // Show tooltip on hover over the entire label group (desktop only)
+        yLabelGroup
+          .style('cursor', 'help')
+          .on('mouseenter', () => yTooltip.style('opacity', '1'))
+          .on('mouseleave', () => yTooltip.style('opacity', '0'));
+      }
 
       // Line generator
       const line = d3.line()
@@ -618,22 +718,25 @@
 
       sortedCities.forEach(city => renderCity(city));
 
-      // Info box - positioned at bottom-left of plot area
-      const infoBox = container.append('div')
+      // Info box - positioned at top-left on mobile, bottom-left on desktop/tablet
+      const infoBoxParent = isMobile ? chartWrapper : container;
+      const infoBox = infoBoxParent.append('div')
         .attr('class', 'info-box')
         .style('position', 'absolute')
-        .style('left', (margin.left + 30) + 'px')
-        .style('bottom', (margin.bottom + 30) + 'px')
+        .style('left', (margin.left + (isMobile ? 8 : (isTablet ? 15 : 30))) + 'px')
+        .style('top', isMobile ? (margin.top + 10) + 'px' : 'auto')  // Top on mobile (inside chart wrapper)
+        .style('bottom', isMobile ? 'auto' : (margin.bottom + 20) + 'px')  // Bottom on desktop/tablet
         .style('background', 'rgba(255, 255, 255, 0.95)')
         .style('border', '1px solid #ddd')
         .style('border-radius', '4px')
-        .style('padding', '10px 14px')
+        .style('padding', isMobile ? '6px 8px' : (isTablet ? '8px 10px' : '10px 14px'))
         .style('pointer-events', 'none')
-        .style('font-size', '13px')
+        .style('font-size', isMobile ? '10px' : (isTablet ? '11px' : '13px'))
         .style('color', UI_COLORS.text)
         .style('box-shadow', '0 1px 4px rgba(0,0,0,0.1)')
         .style('opacity', 0)
-        .style('transition', 'opacity 0.15s ease');
+        .style('transition', 'opacity 0.15s ease')
+        .style('max-width', isMobile ? '160px' : (isTablet ? '200px' : 'none'));
 
       function showTooltip(city, event) {
         const gdpChange = ((city.gdpEnd - city.gdpStart) / city.gdpStart * 100).toFixed(0);
@@ -730,35 +833,56 @@
           hideTooltip();
         });
 
-      // DDL Branding - directly in container
-      const logoWidth = 350;
-      const ddlBranding = container.append('a')
-        .attr('class', 'ddl-branding')
-        .attr('href', 'https://devdatalab.org')
-        .attr('target', '_blank')
-        .style('display', 'block')
-        .style('position', 'absolute')
-        .style('top', '20px')
-        .style('right', '20px')
-        .style('width', logoWidth + 'px');
+      // DDL Branding - only on desktop (hide on mobile and tablet)
+      let ddlBranding;
+      if (!isMobile && !isTablet) {
+        const logoWidth = 350;
+        ddlBranding = container.append('a')
+          .attr('class', 'ddl-branding')
+          .attr('href', 'https://devdatalab.org')
+          .attr('target', '_blank')
+          .style('display', 'block')
+          .style('position', 'absolute')
+          .style('top', '20px')
+          .style('right', '20px')
+          .style('width', logoWidth + 'px');
+      }
 
-      // Legend wrapper - aligned with chart area
-      const legendWrapper = container.append('div')
-        .style('position', 'absolute')
-        .style('top', (20 + 52 + margin.top) + 'px')  // TODO: 52px is approximate search wrapper height - calculate dynamically
-        .style('right', '50px')  // Match Y-axis label spacing (50px from edge)
-        .style('width', '200px')
-        .style('display', 'flex')
-        .style('flex-direction', 'column')
-        .style('max-height', innerHeight + 'px');  // Max height to match Y-axis, can shrink for regions
+      // Legend wrapper - different layout for mobile vs desktop/tablet
+      let legendWrapper;
+      if (isMobile) {
+        // Mobile: legend below chart - appended to container after chartWrapper
+        // Using normal block flow (both chartWrapper and legendWrapper are block elements)
+        legendWrapper = container.append('div')
+          .attr('class', 'legend-wrapper-mobile')
+          .style('display', 'block')
+          .style('width', '100%')
+          .style('margin-top', '8px')
+          .style('position', 'relative')  // Ensure it's in normal flow, not absolute
+          .style('clear', 'both');  // Clear any floats just in case
+      } else {
+        // Desktop/Tablet: legend on right side, absolute positioned
+        const legendWidth = isTablet ? 160 : 200;
+        const legendRight = isTablet ? 30 : 50;
+        legendWrapper = container.append('div')
+          .style('position', 'absolute')
+          .style('top', (20 + 52 + margin.top) + 'px')  // 52px is approximate search wrapper height
+          .style('right', legendRight + 'px')
+          .style('width', legendWidth + 'px')
+          .style('display', 'flex')
+          .style('flex-direction', 'column')
+          .style('max-height', innerHeight + 'px');
+      }
 
-      ddlBranding.append('svg')
-        .attr('viewBox', '0 0 1877 207')
-        .attr('xmlns', 'http://www.w3.org/2000/svg')
-        .style('width', '100%')
-        .style('height', 'auto')
-        .style('opacity', '0.8')
-        .html(`
+      // Append DDL logo SVG only on desktop
+      if (ddlBranding) {
+        ddlBranding.append('svg')
+          .attr('viewBox', '0 0 1877 207')
+          .attr('xmlns', 'http://www.w3.org/2000/svg')
+          .style('width', '100%')
+          .style('height', 'auto')
+          .style('opacity', '0.8')
+          .html(`
           <g transform="translate(18.73,77.32)" style="fill:#393d3f">
             <path d="m 319.3,-53.6 h 52.32 q 22.32,0 22.32,21.12 v 108 q 0,21.12 -22.32,21.12 h -52.32 z m 52.8,126.24 v -102.24 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -23.76 v 116.16 h 23.76 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
             <path d="m 437.64,-20.48 h 23.52 q 22.56,0 22.56,21.36 V 44.8 h -47.28 v 27.84 q 0,4.08 1.44,5.52 1.44,1.44 5.76,1.44 h 11.04 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 v -9.6 h 21.12 v 12.72 q 0,21.12 -22.32,21.12 h -23.04 q -22.32,0 -22.32,-21.12 V 0.88 q 0,-21.36 22.32,-21.36 z m -1.2,49.44 h 25.92 V 3.52 q 0,-4.08 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -11.76 q -4.32,0 -5.76,1.44 -1.44,1.44 -1.44,5.52 z"/>
@@ -785,6 +909,57 @@
           <path style="fill:#62929e" d="m 190.47,120.5 c -0.19,-0.06 -0.78,-0.2 -1.31,-0.32 -1.15,-0.25 -3.58,-2.36 -4.28,-3.72 -0.72,-1.38 -0.63,-4.09 0.17,-5.4 1.94,-3.18 6.54,-4.37 9.47,-2.44 1.39,0.91 2.4,3.03 2.40,5.07 0,3.62 -1.85,6 -5.22,6.73 -0.48,0.1 -1.03,0.14 -1.22,0.08 z"/>
           <path style="fill:#62929e" d="m 253.01,37.86 c -3.71,-1.28 -6.32,-4.98 -6.32,-8.98 -0.01,-4.07 2.05,-7.49 5.61,-9.35 1.42,-0.74 4.79,-0.83 6.7,-0.18 4.45,1.53 7.1,7.33 5.63,12.37 -0.8,2.75 -3.45,5.46 -6.12,6.25 -2.35,0.7 -3.2,0.68 -5.5,-0.11 z"/>
         `);
+      }
+
+      // Mobile DDL Branding - below the card
+      if (isMobile) {
+        const mobileLogo = d3.select('body').append('div')
+          .attr('class', 'ddl-branding-mobile')
+          .style('max-width', '1200px')
+          .style('margin', '16px auto 20px')
+          .style('padding', '0 10px')
+          .style('text-align', 'center');
+
+        const mobileLogoLink = mobileLogo.append('a')
+          .attr('href', 'https://devdatalab.org')
+          .attr('target', '_blank')
+          .style('display', 'inline-block')
+          .style('width', '200px');
+
+        mobileLogoLink.append('svg')
+          .attr('viewBox', '0 0 1877 207')
+          .attr('xmlns', 'http://www.w3.org/2000/svg')
+          .style('width', '100%')
+          .style('height', 'auto')
+          .style('opacity', '0.6')
+          .html(`
+          <g transform="translate(18.73,77.32)" style="fill:#393d3f">
+            <path d="m 319.3,-53.6 h 52.32 q 22.32,0 22.32,21.12 v 108 q 0,21.12 -22.32,21.12 h -52.32 z m 52.8,126.24 v -102.24 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -23.76 v 116.16 h 23.76 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
+            <path d="m 437.64,-20.48 h 23.52 q 22.56,0 22.56,21.36 V 44.8 h -47.28 v 27.84 q 0,4.08 1.44,5.52 1.44,1.44 5.76,1.44 h 11.04 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 v -9.6 h 21.12 v 12.72 q 0,21.12 -22.32,21.12 h -23.04 q -22.32,0 -22.32,-21.12 V 0.88 q 0,-21.36 22.32,-21.36 z m -1.2,49.44 h 25.92 V 3.52 q 0,-4.08 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -11.76 q -4.32,0 -5.76,1.44 -1.44,1.44 -1.44,5.52 z"/>
+            <path d="m 514.05,-20.48 15.36,98.88 15.6,-98.88 h 21.6 l -21.6,117.12 h -30.96 l -21.6,-117.12 z"/>
+            <path d="m 599.83,-20.48 h 23.52 q 22.56,0 22.56,21.36 V 44.8 h -47.28 v 27.84 q 0,4.08 1.44,5.52 1.44,1.44 5.76,1.44 h 11.04 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 v -9.6 h 21.12 v 12.72 q 0,21.12 -22.32,21.12 h -23.04 q -22.32,0 -22.32,-21.12 V 0.88 q 0,-21.36 22.32,-21.36 z m -1.2,49.44 h 25.92 V 3.52 q 0,-4.08 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -11.76 q -4.32,0 -5.76,1.44 -1.44,1.44 -1.44,5.52 z"/>
+            <path d="m 685.84,96.64 h -21.6 v -160.56 h 21.6 z"/>
+            <path d="m 727.78,-20.48 h 25.68 q 22.32,0 22.32,21.36 V 75.52 q 0,21.12 -22.32,21.12 h -25.68 q -22.08,0 -22.08,-21.12 V 0.88 q 0,-21.36 22.08,-21.36 z m 26.64,92.88 V 3.76 q 0,-4.32 -1.44,-5.76 -1.44,-1.44 -5.76,-1.44 h -13.2 q -4.32,0 -5.76,1.44 -1.2,1.44 -1.2,5.76 V 72.4 q 0,4.32 1.2,5.76 1.44,1.44 5.76,1.44 h 13.2 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 z"/>
+            <path d="m 831.97,-20.48 h 8.4 q 21.84,0 21.84,21.36 V 75.52 q 0,21.12 -21.84,21.12 h -8.4 q -11.76,0 -14.88,-9.36 v 42.48 h -21.6 V -20.48 h 21.6 v 9.36 q 3.12,-9.36 14.88,-9.36 z m 8.64,92.64 V 4 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 70.72 q 0,4.56 1.68,6.48 1.92,1.92 6.24,1.92 h 8.4 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
+            <path d="m 963.34,-20.48 h 8.4 q 21.6,0 21.6,21.36 V 96.64 h -21.6 V 4 q 0,-4.32 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -8.64 q -7.68,0 -7.68,8.4 V 96.64 h -21.6 V 4 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 96.64 h -21.6 v -117.12 h 21.6 v 9.36 q 3.12,-9.36 14.88,-9.36 h 8.4 q 15.36,0 19.92,10.8 2.88,-10.8 16.8,-10.8 z"/>
+            <path d="m 1035.3,-20.48 h 23.52 q 22.56,0 22.56,21.36 V 44.8 h -47.28 v 27.84 q 0,4.08 1.44,5.52 1.44,1.44 5.76,1.44 h 11.04 q 4.32,0 5.76,-1.44 1.44,-1.44 1.44,-5.76 v -9.6 h 21.12 v 12.72 q 0,21.12 -22.32,21.12 h -23.04 q -22.32,0 -22.32,-21.12 V 0.88 q 0,-21.36 22.32,-21.36 z m -1.2,49.44 h 25.92 V 3.52 q 0,-4.08 -1.44,-5.52 -1.2,-1.44 -5.52,-1.44 h -11.76 q -4.32,0 -5.76,1.44 -1.44,1.44 -1.44,5.52 z"/>
+            <path d="m 1136.19,-20.48 h 8.4 q 21.84,0 21.84,21.36 V 96.64 h -21.6 V 4 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 96.64 h -21.6 v -117.12 h 21.6 v 9.36 q 3.12,-9.36 14.88,-9.36 z"/>
+            <path d="m 1226.97,-2.96 h -16.08 V 71.2 q 0,4.32 1.2,5.76 1.44,1.2 5.76,1.2 h 9.12 v 18.48 h -15.36 q -22.56,0 -22.56,-21.12 V -2.96 h -11.04 V -20.48 h 11.04 v -19.92 h 21.84 v 19.92 h 16.08 z"/>
+            <path d="m 1276.95,-53.6 h 52.32 q 22.32,0 22.32,21.12 v 108 q 0,21.12 -22.32,21.12 h -52.32 z m 52.8,126.24 v -102.24 q 0,-4.32 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -23.76 v 116.16 h 23.76 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
+            <path d="m 1417.14,-20.48 h 21.6 v 117.12 h -21.6 v -9.36 q -3.12,9.36 -14.88,9.36 h -8.64 q -21.6,0 -21.6,-21.12 V 0.88 q 0,-21.36 21.6,-21.36 h 8.64 q 11.76,0 14.88,9.36 z m -16.32,99.6 h 8.4 q 4.32,0 6,-1.92 1.92,-1.92 1.92,-6.48 V 5.44 q 0,-4.56 -1.92,-6.48 -1.68,-1.92 -6,-1.92 h -8.4 q -4.32,0 -5.76,1.44 -1.44,1.2 -1.44,5.52 V 72.16 q 0,4.32 1.44,5.76 1.44,1.2 5.76,1.2 z"/>
+            <path d="m 1499.31,-2.96 h -16.08 V 71.2 q 0,4.32 1.2,5.76 1.44,1.2 5.76,1.2 h 9.12 v 18.48 h -15.36 q -22.56,0 -22.56,-21.12 V -2.96 h -11.04 V -20.48 h 11.04 v -19.92 h 21.84 v 19.92 h 16.08 z"/>
+            <path d="m 1555.89,-20.48 h 21.6 v 117.12 h -21.6 v -9.36 q -3.12,9.36 -14.88,9.36 h -8.64 q -21.6,0 -21.6,-21.12 V 0.88 q 0,-21.36 21.6,-21.36 h 8.64 q 11.76,0 14.88,9.36 z m -16.32,99.6 h 8.4 q 4.32,0 6,-1.92 1.92,-1.92 1.92,-6.48 V 5.44 q 0,-4.56 -1.92,-6.48 -1.68,-1.92 -6,-1.92 h -8.4 q -4.32,0 -5.76,1.44 -1.44,1.2 -1.44,5.52 V 72.16 q 0,4.32 1.44,5.76 1.44,1.2 5.76,1.2 z"/>
+            <path d="m 1656.67,79.12 h 37.2 v 17.52 h -58.8 v -150.24 h 21.6 z"/>
+            <path d="m 1749.02,-20.48 h 21.6 v 117.12 h -21.6 v -9.36 q -3.12,9.36 -14.88,9.36 h -8.64 q -21.6,0 -21.6,-21.12 V 0.88 q 0,-21.36 21.6,-21.36 h 8.64 q 11.76,0 14.88,9.36 z m -16.32,99.6 h 8.4 q 4.32,0 6,-1.92 1.92,-1.92 1.92,-6.48 V 5.44 q 0,-4.56 -1.92,-6.48 -1.68,-1.92 -6,-1.92 h -8.4 q -4.32,0 -5.76,1.44 -1.44,1.2 -1.44,5.52 V 72.16 q 0,4.32 1.44,5.76 1.44,1.2 5.76,1.2 z"/>
+            <path d="m 1828.07,-20.72 h 8.4 q 21.84,0 21.84,21.36 V 75.52 q 0,21.12 -21.84,21.12 h -8.4 q -11.76,0 -14.88,-9.36 v 9.36 h -21.6 v -160.56 h 21.6 v 52.56 q 3.12,-9.36 14.88,-9.36 z m 8.64,92.88 V 3.76 q 0,-4.08 -1.44,-5.52 -1.44,-1.44 -5.76,-1.44 h -8.4 q -4.32,0 -6.24,1.92 -1.68,1.92 -1.68,6.48 V 70.72 q 0,4.56 1.68,6.48 1.92,1.92 6.24,1.92 h 8.4 q 4.32,0 5.76,-1.2 1.44,-1.44 1.44,-5.76 z"/>
+          </g>
+          <path style="fill:#546a7b" d="m 53.53,197.43 c -3.32,-0.24 -12.64,-0.54 -20.71,-0.67 -23.73,-0.38 -29.22,-0.83 -30.91,-2.53 -0.58,-0.58 -0.62,-0.81 -0.26,-1.59 0.84,-1.85 2.2,-2.15 10.34,-2.28 l 7.41,-0.12 -0.11,-22.68 c -0.11,-22.59 -0.11,-22.69 -0.89,-24.77 -1.24,-3.29 -2.81,-5.32 -7.54,-9.78 -7.09,-6.68 -9.15,-10.45 -9.49,-17.38 -0.47,-9.71 5,-18.06 13.82,-21.08 1.87,-0.64 3.46,-0.82 9.18,-1.06 8.36,-0.35 10.96,-0.93 16.4,-3.63 8.41,-4.18 16.3,-11.05 26.96,-23.48 6.63,-7.73 9.55,-11.95 11.53,-16.66 1.89,-4.5 2.1,-6.27 1.66,-14.26 -0.59,-10.8 0.27,-17.07 3.08,-22.42 2.48,-4.71 8.2,-8.94 14.58,-10.78 3.72,-1.07 11.9,-1.15 15.65,-0.16 7.48,1.99 12.76,6.27 15.83,12.82 2.32,4.94 2.62,6.75 2.45,14.38 -0.06,2.47 -0.1,4.58 -0.13,6.42 -0.15,10.16 0.23,11.63 2.2,15.86 1.62,3.48 3.28,5.72 9.36,12.63 9.52,10.83 21.55,21.30 28.64,24.93 4.94,2.53 7.07,2.84 15.97,2.35 8.83,-0.49 11.32,-0.95 14.71,-2.73 5.47,-2.87 16.2,-14.81 24.63,-27.42 4.41,-6.6 6.63,-12.32 6.04,-15.62 -0.11,-0.61 -0.95,-3.45 -1.88,-6.32 -0.93,-2.87 -1.85,-6.24 -2.05,-7.48 -0.93,-5.75 -0.13,-10.73 2.63,-16.34 1.33,-2.71 2.15,-3.82 4.62,-6.3 2.42,-2.43 3.57,-3.3 5.96,-4.46 4.28,-2.1 7.07,-2.59 13.23,-2.36 2.94,0.11 5.92,0.43 7.14,0.76 6.33,1.71 11.38,5.85 14.23,11.65 2.6,5.31 3.11,7.76 3.14,15.14 0.03,5.95 -0.02,6.38 -0.88,8.61 -1.89,4.9 -3.46,6.82 -12.7,15.58 -3.27,3.1 -4.05,4.05 -5.12,6.27 -2.5,5.17 -2.88,7.98 -3.36,25.16 -0.39,13.89 -0.71,18.16 -1.58,21.07 -0.54,1.81 -2.32,4.29 -2.77,3.85 -0.42,-0.42 -0.85,-14.65 -0.87,-28.67 -0.02,-14.99 -0.24,-17.82 -1.58,-20.59 -1.11,-2.28 -3.49,-4.49 -5.39,-5 -1.89,-0.51 -4.33,0.04 -6.2,1.4 -8.52,6.17 -27.27,30.61 -29.49,38.45 -0.77,2.7 -0.5,6.73 0.68,10.33 1.95,5.95 1.93,9.19 -0.1,14.41 -1.5,3.86 -3.27,6.19 -9.12,12 -5.98,5.94 -7.17,7.65 -8.4,12.06 -0.73,2.64 -0.76,3.43 -0.89,24.06 l -0.13,21.32 h 30.3 30.3 l 0.09,-25.38 c 0.09,-24.39 0.12,-25.4 0.76,-26.11 0.9,-1 2.09,-0.93 2.8,0.16 1.57,2.39 1.69,4.26 1.84,28.59 l 0.14,23.05 9.87,0.1 c 9.4,0.1 9.92,0.14 10.85,0.83 2.04,1.52 1.2,3.29 -1.91,3.99 -3.61,0.81 -15.12,1.37 -28.44,1.38 -8.18,0.01 -17.16,0.22 -21.76,0.51 -10.68,0.69 -164.84,0.68 -174.35,-0.01 z m 50.08,-29.67 c 0.01,-23.57 0.13,-25.89 1.56,-28.06 1.58,-2.41 3.16,-0.9 4.25,4.06 0.46,2.08 0.57,6.15 0.70,24.52 l 0.15,22.02 h 38.64 38.64 l -0.14,-21.67 c -0.18,-27.81 0.03,-26.78 -6.9,-34.21 -6.16,-6.6 -8.14,-9.59 -9.67,-14.54 -0.83,-2.69 -1.44,-8.24 -1.44,-13.15 0,-3.85 -0.56,-6.12 -2.31,-9.33 -3.04,-5.58 -8.31,-11.75 -20.48,-23.92 -12.17,-12.17 -17.18,-16.4 -22.37,-18.87 -5.84,-2.78 -10.43,-1.04 -12.13,4.59 -1.15,3.83 -1.51,8.48 -1.88,24.86 -0.21,9.06 -0.54,17.68 -0.75,19.15 -0.41,2.97 -1.58,5.5 -3.07,6.59 l -0.95,0.7 -0.61,-16.93 c -0.98,-27.34 -1.4,-31.72 -3.47,-35.8 -2.36,-4.67 -6.94,-5.81 -12.54,-3.14 -6.46,3.08 -18.17,13.57 -31,27.77 -7.02,7.76 -9.23,10.58 -11.11,14.17 -2.29,4.36 -3.03,7.04 -3.40,12.26 -0.81,11.47 -1.9,13.91 -9.98,22.37 -5.88,6.15 -6.6,7.5 -6.98,13.14 -0.15,2.2 -0.21,13.44 -0.14,24.98 l 0.14,20.97 h 38.61 38.61 l 0.01,-22.54 z M 27.82,129.43 c 5.77,-2.06 10.09,-7.36 11.06,-13.57 1.26,-8.09 -4.3,-15.87 -12.49,-17.48 -1.35,-0.27 -3.63,-0.36 -6.02,-0.25 -3.54,0.17 -4.04,0.28 -6.45,1.47 -7.4,3.65 -10.53,11.51 -7.79,19.5 1.01,2.95 2.1,4.62 4.42,6.84 3.58,3.41 6.73,4.56 11.94,4.34 2.15,-0.09 4.01,-0.39 5.32,-0.85 z m 166.46,0.49 c 5.19,-0.99 9.24,-4.04 11.48,-8.63 4.74,-9.7 -0.24,-20.85 -10.24,-22.93 -1.12,-0.23 -3.57,-0.33 -5.93,-0.23 -3.65,0.15 -4.24,0.27 -6.44,1.32 -3.3,1.57 -6.7,4.97 -7.85,7.83 -0.72,1.8 -0.83,2.66 -0.82,6.27 0.01,4.77 0.51,6.42 3,9.97 2.32,3.3 5.67,5.57 9.47,6.39 2.83,0.62 4.17,0.62 7.34,0.01 z M 112.5,48.97 c 7.16,-1.83 11.5,-6.22 13.27,-13.43 0.92,-3.72 0.84,-12.81 -0.13,-15.72 -2.43,-7.28 -9.24,-11.86 -18.55,-12.48 -4.78,-0.32 -10.08,1.35 -13.86,4.36 -2.4,1.91 -5.02,5.94 -6.21,9.55 -1.29,3.92 -1.36,9.9 -0.17,13.8 2.31,7.54 7.73,12.88 14.67,14.45 2.81,0.63 7.28,0.42 10.98,-0.52 z m 148.64,0.01 c 3.81,-1.07 8.05,-3.38 10.34,-5.63 8.43,-8.24 5.95,-25.11 -4.73,-32.25 -3.46,-2.32 -6.2,-3.23 -10.36,-3.46 -9.84,-0.54 -17.36,4.47 -20.37,13.58 -0.83,2.5 -0.95,3.41 -0.95,7.21 0,3.84 0.11,4.68 0.96,7.13 1.68,4.88 4.33,8.55 7.88,10.92 5.09,3.4 10.99,4.25 17.23,2.49 z"/>
+          <path style="fill:#62929e" d="m 19.3,119.97 c -3.1,-1.64 -4.33,-5.6 -2.64,-8.48 2.31,-3.94 6.89,-4.81 10.18,-1.92 3.16,2.78 2.26,8.48 -1.64,10.37 -1.9,0.92 -4.19,0.93 -5.9,0.03 z"/>
+          <path style="fill:#62929e" d="m 103.03,37.82 c -3.21,-1.27 -5.77,-4.57 -6.24,-8.05 -0.48,-3.54 1.92,-7.73 5.71,-9.95 3.35,-1.96 8.92,-0.76 11.24,2.44 1.16,1.6 2.06,4.3 2.06,6.17 0,1.86 -0.97,4.82 -2.14,6.51 -2.19,3.19 -6.74,4.42 -10.63,2.88 z"/>
+          <path style="fill:#62929e" d="m 190.47,120.5 c -0.19,-0.06 -0.78,-0.2 -1.31,-0.32 -1.15,-0.25 -3.58,-2.36 -4.28,-3.72 -0.72,-1.38 -0.63,-4.09 0.17,-5.4 1.94,-3.18 6.54,-4.37 9.47,-2.44 1.39,0.91 2.40,3.03 2.40,5.07 0,3.62 -1.85,6 -5.22,6.73 -0.48,0.1 -1.03,0.14 -1.22,0.08 z"/>
+          <path style="fill:#62929e" d="m 253.01,37.86 c -3.71,-1.28 -6.32,-4.98 -6.32,-8.98 -0.01,-4.07 2.05,-7.49 5.61,-9.35 1.42,-0.74 4.79,-0.83 6.7,-0.18 4.45,1.53 7.1,7.33 5.63,12.37 -0.8,2.75 -3.45,5.46 -6.12,6.25 -2.35,0.7 -3.2,0.68 -5.5,-0.11 z"/>
+        `);
+      }
 
       // Legend Container - can fill or shrink based on content
       const legendContainer = legendWrapper.append('div')
@@ -793,7 +968,8 @@
         .style('overflow', 'hidden')
         .style('background', 'white')
         .style('border-radius', '4px')
-        .style('border', '1px solid #eee');
+        .style('border', '1px solid #eee')
+        .style('max-height', 'none');  // Let content determine height
 
       // Mode toggle
       const modeToggle = legendContainer.append('div')
@@ -842,66 +1018,73 @@
           updateAllTrajectories();
         });
 
-      // Marker key - shows what start/end markers mean
-      const markerKey = legendContainer.append('div')
-        .style('display', 'flex')
-        .style('justify-content', 'center')
-        .style('align-items', 'center')
-        .style('gap', '6px')
-        .style('padding', '8px 12px')
-        .style('border-bottom', '1px solid #eee')
-        .style('font-size', '11px')
-        .style('color', UI_COLORS.textLight);
+      // Marker key - shows what start/end markers mean (hidden on mobile/tablet to save space)
+      if (!isMobile && !isTablet) {
+        const markerKey = legendContainer.append('div')
+          .style('display', 'flex')
+          .style('justify-content', 'center')
+          .style('align-items', 'center')
+          .style('gap', '6px')
+          .style('padding', '8px 12px')
+          .style('border-bottom', '1px solid #eee')
+          .style('font-size', '11px')
+          .style('color', UI_COLORS.textLight);
 
-      // 2013 label
-      markerKey.append('span').text('2013');
+        // 2013 label
+        markerKey.append('span').text('2013');
 
-      // Visual: circle —— line —— triangle
-      const keySvg = markerKey.append('svg')
-        .attr('width', '60')
-        .attr('height', '14')
-        .attr('viewBox', '0 0 60 14');
+        // Visual: circle —— line —— triangle
+        const keySvg = markerKey.append('svg')
+          .attr('width', '60')
+          .attr('height', '14')
+          .attr('viewBox', '0 0 60 14');
 
-      // Start circle (solid)
-      keySvg.append('circle')
-        .attr('cx', '6')
-        .attr('cy', '7')
-        .attr('r', '4')
-        .style('fill', '#666');
+        // Start circle (solid)
+        keySvg.append('circle')
+          .attr('cx', '6')
+          .attr('cy', '7')
+          .attr('r', '4')
+          .style('fill', '#666');
 
-      // Connecting line (extends under the triangle)
-      keySvg.append('line')
-        .attr('x1', '10')
-        .attr('y1', '7')
-        .attr('x2', '54')
-        .attr('y2', '7')
-        .style('stroke', '#666')
-        .style('stroke-width', '1.5');
+        // Connecting line (extends under the triangle)
+        keySvg.append('line')
+          .attr('x1', '10')
+          .attr('y1', '7')
+          .attr('x2', '54')
+          .attr('y2', '7')
+          .style('stroke', '#666')
+          .style('stroke-width', '1.5');
 
-      // End triangle (hollow, white fill covers line overlap)
-      keySvg.append('path')
-        .attr('d', 'M54,2 L59,12 L49,12 Z')
-        .style('fill', 'white')
-        .style('stroke', '#666')
-        .style('stroke-width', '1.5');
+        // End triangle (hollow, white fill covers line overlap)
+        keySvg.append('path')
+          .attr('d', 'M54,2 L59,12 L49,12 Z')
+          .style('fill', 'white')
+          .style('stroke', '#666')
+          .style('stroke-width', '1.5');
 
-      // 2023 label
-      markerKey.append('span').text('2023');
+        // 2023 label
+        markerKey.append('span').text('2023');
+      }
 
-      // Legend items container - scrollable, fills remaining space
+      // Legend items container - responsive layout
       const legendItemsContainer = legendContainer.append('div')
         .attr('class', 'legend-items')
-        .style('flex', '1')
-        .style('overflow-y', 'auto');
+        .style('flex', isMobile ? '0 1 auto' : '1')
+        .style('overflow-y', isMobile ? 'visible' : 'auto')  // No vertical scroll on mobile
+        .style('overflow-x', isMobile ? 'auto' : 'visible')
+        .style('white-space', isMobile ? 'nowrap' : 'normal')
+        .style('padding', isMobile ? '6px 4px' : '0')
+        .style('-webkit-overflow-scrolling', 'touch');  // Smooth scrolling on iOS
 
       // Build legend items
       function rebuildLegend() {
         legendItemsContainer.selectAll('*').remove();
 
         if (legendMode === 'country') {
-          // Country mode: full height with scroll
-          legendContainer.style('flex', '1');
-          legendItemsContainer.style('flex', '1').style('overflow-y', 'auto');
+          // Country mode: full height with scroll on desktop, auto-size on mobile
+          legendContainer.style('flex', isMobile ? '0 1 auto' : '1');
+          legendItemsContainer.style('flex', isMobile ? '0 1 auto' : '1')
+            .style('overflow-y', isMobile ? 'visible' : 'auto');
           buildCountryLegend();
         } else {
           // Region mode: shrink to fit content
@@ -970,12 +1153,16 @@
           .attr('class', 'legend-item')
           .attr('data-key', key)
           .attr('data-type', type)
-          .style('display', 'flex')
+          .style('display', isMobile ? 'inline-flex' : 'flex')
           .style('align-items', 'center')
-          .style('padding', '5px 12px')
+          .style('padding', isMobile ? '8px 10px' : (isTablet ? '4px 10px' : '5px 12px'))
+          .style('margin-right', isMobile ? '4px' : '0')
+          .style('margin-bottom', isMobile ? '4px' : '0')
           .style('cursor', 'pointer')
           .style('border-radius', '4px')
-          .style('transition', 'background-color 0.15s ease');
+          .style('transition', 'background-color 0.15s ease')
+          .style('background', isMobile ? 'rgba(0,0,0,0.03)' : 'transparent')
+          .style('border', isMobile ? '1px solid #eee' : 'none');
 
         item.append('div')
           .attr('class', 'legend-marker')
@@ -1027,62 +1214,65 @@
           updateAllTrajectories();
         });
 
-        // Hover
-        item.on('mouseenter', function() {
-          d3.select(this).style('background-color', 'rgba(0,0,0,0.05)');
+        // Hover - only on non-touch devices (OWID pattern)
+        // Touch devices get confusing behavior when both hover and click fire
+        if (!isTouchDevice) {
+          item.on('mouseenter', function() {
+            d3.select(this).style('background-color', 'rgba(0,0,0,0.05)');
 
-          linesLayer.selectAll('.city-group').each(function() {
-            const g = d3.select(this);
-            const city = g.datum();
-            const mg = getMarkerGroup(city.id);
+            linesLayer.selectAll('.city-group').each(function() {
+              const g = d3.select(this);
+              const city = g.datum();
+              const mg = getMarkerGroup(city.id);
 
-            let isHoveredItem;
-            if (type === 'country') {
-              isHoveredItem = city.iso3 === key;
-            } else {
-              isHoveredItem = ISO3_TO_REGION[city.iso3] === key;
-            }
-
-            const cityIsActive = isHighlighted(city.iso3);
-
-            if (isHoveredItem) {
-              // If not highlighted, switch to solid color
-              if (!cityIsActive) {
-                g.select('.trajectory-line')
-                  .style('stroke', UI_COLORS.mutedSolid);
-                mg.select('.marker-start')
-                  .style('fill', UI_COLORS.mutedSolid);
-                mg.select('.marker-end')
-                  .style('stroke', UI_COLORS.mutedSolid);
+              let isHoveredItem;
+              if (type === 'country') {
+                isHoveredItem = city.iso3 === key;
+              } else {
+                isHoveredItem = ISO3_TO_REGION[city.iso3] === key;
               }
-              g.select('.trajectory-line')
-                .style('stroke-width', 3)
-                .style('stroke-opacity', 1);
-              mg.select('.marker-start')
-                .style('opacity', 1);
-              mg.select('.marker-end')
-                .style('opacity', 1);
-              g.raise();
-              mg.raise();
-            } else if (cityIsActive) {
-              // Active cities are NOT affected by legend hover - keep full visibility
-              // (do nothing - they maintain their current appearance)
-            } else {
-              // Dim non-active cities and their markers
-              g.select('.trajectory-line')
-                .style('stroke-opacity', 0.15);
-              mg.select('.marker-start')
-                .style('opacity', 0.15);
-              mg.select('.marker-end')
-                .style('opacity', 0.15);
-            }
-          });
-        });
 
-        item.on('mouseleave', function() {
-          d3.select(this).style('background-color', 'transparent');
-          updateAllTrajectories();
-        });
+              const cityIsActive = isHighlighted(city.iso3);
+
+              if (isHoveredItem) {
+                // If not highlighted, switch to solid color
+                if (!cityIsActive) {
+                  g.select('.trajectory-line')
+                    .style('stroke', UI_COLORS.mutedSolid);
+                  mg.select('.marker-start')
+                    .style('fill', UI_COLORS.mutedSolid);
+                  mg.select('.marker-end')
+                    .style('stroke', UI_COLORS.mutedSolid);
+                }
+                g.select('.trajectory-line')
+                  .style('stroke-width', 3)
+                  .style('stroke-opacity', 1);
+                mg.select('.marker-start')
+                  .style('opacity', 1);
+                mg.select('.marker-end')
+                  .style('opacity', 1);
+                g.raise();
+                mg.raise();
+              } else if (cityIsActive) {
+                // Active cities are NOT affected by legend hover - keep full visibility
+                // (do nothing - they maintain their current appearance)
+              } else {
+                // Dim non-active cities and their markers
+                g.select('.trajectory-line')
+                  .style('stroke-opacity', 0.15);
+                mg.select('.marker-start')
+                  .style('opacity', 0.15);
+                mg.select('.marker-end')
+                  .style('opacity', 0.15);
+              }
+            });
+          });
+
+          item.on('mouseleave', function() {
+            d3.select(this).style('background-color', 'transparent');
+            updateAllTrajectories();
+          });
+        }
       }
 
       function updateLegendItems() {
@@ -1115,11 +1305,13 @@
       // Build initial legend
       rebuildLegend();
 
-      // Search with dropdown
-      const searchWrapper = container.insert('div', 'svg')
-        .style('margin-bottom', '12px')
+      // Search with dropdown - full width on mobile, smaller on tablet
+      // On mobile, insert before chartWrapper; on desktop, insert before svg
+      const insertSelector = isMobile ? '.chart-wrapper-mobile' : 'svg';
+      const searchWrapper = container.insert('div', insertSelector)
+        .style('margin-bottom', isMobile ? '8px' : '12px')
         .style('position', 'relative')
-        .style('width', '280px');
+        .style('width', isMobile ? '100%' : (isTablet ? '240px' : '280px'));
 
       const searchContainer = searchWrapper.append('div')
         .style('display', 'flex')
@@ -1130,16 +1322,18 @@
         .attr('height', 16)
         .attr('viewBox', '0 0 24 24')
         .style('margin-right', '8px')
+        .style('flex-shrink', '0')
         .html(`<path fill="#999" d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>`);
 
       const searchInput = searchContainer.append('input')
         .attr('type', 'text')
-        .attr('placeholder', 'Search cities or countries...')
-        .style('width', '220px')
+        .attr('placeholder', isMobile ? 'Search...' : 'Search cities or countries...')
+        .style('width', isMobile ? '100%' : (isTablet ? '190px' : '220px'))
+        .style('flex', isMobile ? '1' : 'none')
         .style('border', '1px solid #ccc')
         .style('border-radius', '4px')
-        .style('padding', '8px 12px')
-        .style('font-size', '13px')
+        .style('padding', isMobile ? '10px 12px' : '8px 12px')
+        .style('font-size', isMobile ? '16px' : (isTablet ? '12px' : '13px'))  // 16px on mobile prevents iOS zoom
         .style('font-family', 'inherit')
         .style('outline', 'none');
 
@@ -1157,14 +1351,15 @@
           clearSelection();
         });
 
-      // Dropdown for search results
+      // Dropdown for search results - responsive width
       const dropdown = searchWrapper.append('div')
         .attr('class', 'search-dropdown')
         .style('position', 'absolute')
         .style('top', '100%')
-        .style('left', '24px')
-        .style('width', '220px')
-        .style('max-height', '300px')
+        .style('left', isMobile ? '0' : '24px')
+        .style('right', isMobile ? '0' : 'auto')
+        .style('width', isMobile ? 'auto' : (isTablet ? '190px' : '220px'))
+        .style('max-height', isMobile ? '200px' : '300px')
         .style('overflow-y', 'auto')
         .style('background', 'white')
         .style('border', '1px solid #ccc')
