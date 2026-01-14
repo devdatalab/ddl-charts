@@ -1154,10 +1154,7 @@
         .style('padding', '0 4px')
         .text('×')
         .on('click', function() {
-          searchInput.property('value', '');
-          clearBtn.style('display', 'none');
-          dropdown.style('display', 'none');
-          updateAllTrajectories();
+          clearSelection();
         });
 
       // Dropdown for search results
@@ -1234,8 +1231,18 @@
         dropdown.style('display', 'none');
         clearBtn.style('display', 'inline');
 
-        // Highlight only this city
+        // Highlight only this city and show tooltip persistently
         highlightSingleCity(city);
+        showTooltip(city);
+      }
+
+      function clearSelection() {
+        selectedCity = null;
+        searchInput.property('value', '');
+        clearBtn.style('display', 'none');
+        dropdown.style('display', 'none');
+        updateAllTrajectories();
+        hideTooltip();
       }
 
       function updateDropdown(term) {
@@ -1293,7 +1300,6 @@
             .on('mousedown', function(event) {
               event.preventDefault(); // Prevent blur before click registers
               selectCity(city);
-              showTooltip(city);
             });
 
           item.append('div')
@@ -1362,7 +1368,11 @@
       }
 
       searchInput.on('input', function() {
-        selectedCity = null;
+        // Clear any persistent selection when user types
+        if (selectedCity) {
+          selectedCity = null;
+          hideTooltip();
+        }
         performSearch(this.value);
       });
 
