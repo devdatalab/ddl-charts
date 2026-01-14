@@ -1,0 +1,240 @@
+/**
+ * OWID-inspired theme for DDL Charts
+ * Based on Our World in Data's design language
+ */
+
+/* CSS Variables for easy theming */
+:root {
+  --ddl-font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --ddl-font-size-base: 13px;
+  --ddl-font-size-small: 11px;
+  --ddl-font-size-large: 15px;
+
+  --ddl-color-text: #5b5b5b;
+  --ddl-color-text-light: #999999;
+  --ddl-color-background: #ffffff;
+  --ddl-color-border: #cccccc;
+  --ddl-color-grid: #e0e0e0;
+  --ddl-color-grid-light: #f0f0f0;
+  --ddl-color-hover: rgba(0, 0, 0, 0.05);
+  --ddl-color-primary: #1E88E5;
+
+  /* Highlighted country colors */
+  --ddl-color-china: #E53935;
+  --ddl-color-india: #FFD700;
+  --ddl-color-usa: #1E88E5;
+
+  /* Chart dimensions */
+  --ddl-transition-fast: 0.15s ease;
+  --ddl-transition-medium: 0.25s ease;
+  --ddl-border-radius: 4px;
+  --ddl-shadow-light: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --ddl-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Base chart container */
+.ddl-chart-container {
+  font-family: var(--ddl-font-family);
+  font-size: var(--ddl-font-size-base);
+  color: var(--ddl-color-text);
+  background: var(--ddl-color-background);
+  position: relative;
+}
+
+/* SVG elements */
+.ddl-chart-svg {
+  display: block;
+}
+
+/* Axis styling */
+.x-axis,
+.y-axis {
+  font-family: var(--ddl-font-family);
+  font-size: var(--ddl-font-size-small);
+}
+
+.x-axis path,
+.y-axis path {
+  stroke: var(--ddl-color-border);
+}
+
+.x-axis line,
+.y-axis line {
+  stroke: var(--ddl-color-grid);
+}
+
+.x-axis text,
+.y-axis text {
+  fill: var(--ddl-color-text);
+}
+
+.x-axis-label,
+.y-axis-label {
+  font-size: var(--ddl-font-size-base);
+  fill: var(--ddl-color-text);
+}
+
+/* Grid lines */
+.grid-line {
+  stroke: var(--ddl-color-grid-light);
+  stroke-dasharray: 2, 2;
+}
+
+/* Trajectory lines */
+.trajectory-line {
+  transition: stroke-width var(--ddl-transition-fast),
+              stroke-opacity var(--ddl-transition-fast);
+}
+
+.city-group:hover .trajectory-line {
+  stroke-width: 5px !important;
+  stroke-opacity: 1 !important;
+}
+
+/* Markers */
+.marker-start,
+.marker-end {
+  transition: opacity var(--ddl-transition-fast);
+}
+
+/* Legend */
+.ddl-legend {
+  font-family: var(--ddl-font-family);
+  font-size: var(--ddl-font-size-base);
+  background: var(--ddl-color-background);
+  border-radius: var(--ddl-border-radius);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: var(--ddl-border-radius);
+  transition: background-color var(--ddl-transition-fast),
+              opacity var(--ddl-transition-fast);
+}
+
+.legend-item:hover {
+  background-color: var(--ddl-color-hover);
+}
+
+.legend-item--hidden {
+  opacity: 0.4;
+}
+
+.legend-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  color: var(--ddl-color-text);
+  white-space: nowrap;
+}
+
+/* Tooltip */
+.ddl-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.97);
+  border: 1px solid var(--ddl-color-border);
+  border-radius: var(--ddl-border-radius);
+  padding: 10px 12px;
+  box-shadow: var(--ddl-shadow-medium);
+  font-family: var(--ddl-font-family);
+  font-size: var(--ddl-font-size-base);
+  color: var(--ddl-color-text);
+  line-height: 1.5;
+  opacity: 0;
+  transition: opacity var(--ddl-transition-fast);
+  z-index: 1000;
+  max-width: 300px;
+}
+
+.ddl-tooltip--visible {
+  opacity: 1;
+}
+
+/* Search */
+.ddl-search {
+  display: flex;
+  align-items: center;
+}
+
+.ddl-search input {
+  border: 1px solid var(--ddl-color-border);
+  border-radius: var(--ddl-border-radius);
+  padding: 8px 12px;
+  font-family: var(--ddl-font-family);
+  font-size: var(--ddl-font-size-base);
+  color: var(--ddl-color-text);
+  outline: none;
+  transition: border-color var(--ddl-transition-fast);
+}
+
+.ddl-search input:focus {
+  border-color: var(--ddl-color-primary);
+}
+
+.ddl-search input::placeholder {
+  color: var(--ddl-color-text-light);
+}
+
+.ddl-search-clear {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+  margin-left: 4px;
+  color: var(--ddl-color-text-light);
+  font-size: 16px;
+  transition: color var(--ddl-transition-fast);
+}
+
+.ddl-search-clear:hover {
+  color: var(--ddl-color-text);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  :root {
+    --ddl-font-size-base: 12px;
+    --ddl-font-size-small: 10px;
+  }
+
+  .ddl-legend {
+    max-width: 150px;
+  }
+
+  .legend-item {
+    padding: 3px 8px;
+  }
+
+  .legend-marker {
+    width: 10px;
+    height: 10px;
+    margin-right: 6px;
+  }
+
+  .ddl-search input {
+    width: 150px;
+    padding: 6px 10px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .ddl-legend,
+  .ddl-search,
+  .ddl-tooltip {
+    display: none;
+  }
+
+  .trajectory-line {
+    stroke-opacity: 0.7 !important;
+  }
+}
