@@ -1629,10 +1629,57 @@
       updateAllTrajectories();
     }
 
+    // Track current dimensions for resize detection
+    let currentWidth = window.innerWidth;
+    let currentHeight = window.innerHeight;
+    let resizeTimeout = null;
+
+    // Initial chart creation
     createChart().catch(err => {
       console.error('Error creating chart:', err);
       document.getElementById('chart-container').innerHTML =
         '<div style="color: red; padding: 20px;">Error loading chart. Check console for details.</div>';
+    });
+
+    // Handle resize/rotation - debounced to avoid excessive redraws
+    window.addEventListener('resize', () => {
+      // Clear any pending resize
+      if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+      }
+
+      // Debounce: wait 250ms after last resize event
+      resizeTimeout = setTimeout(() => {
+        const newWidth = window.innerWidth;
+        const newHeight = window.innerHeight;
+
+        // Only redraw if dimensions changed significantly (>50px) or orientation changed
+        const widthChanged = Math.abs(newWidth - currentWidth) > 50;
+        const heightChanged = Math.abs(newHeight - currentHeight) > 50;
+        const orientationChanged = (currentWidth > currentHeight) !== (newWidth > newHeight);
+
+        if (widthChanged || heightChanged || orientationChanged) {
+          currentWidth = newWidth;
+          currentHeight = newHeight;
+
+          // Clear existing chart and mobile logo
+          const container = document.getElementById('chart-container');
+          container.innerHTML = '<div class="loading">Resizing...</div>';
+
+          // Remove mobile DDL logo if it exists
+          const mobileLogo = document.querySelector('.ddl-branding-mobile');
+          if (mobileLogo) {
+            mobileLogo.remove();
+          }
+
+          // Recreate chart
+          createChart().catch(err => {
+            console.error('Error recreating chart:', err);
+            container.innerHTML =
+              '<div style="color: red; padding: 20px;">Error loading chart. Check console for details.</div>';
+          });
+        }
+      }, 250);
     });
   </script>
 </body>
