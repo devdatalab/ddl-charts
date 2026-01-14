@@ -1223,11 +1223,13 @@
 
         const lowerTerm = term.toLowerCase().trim();
 
-        // Find matching cities
+        // Find matching cities (search by city name, country name, or ISO3 code)
         const matches = data.cities.filter(city => {
           const nameMatch = city.name && city.name.toLowerCase().includes(lowerTerm);
-          const countryMatch = city.country && city.country.toLowerCase().includes(lowerTerm);
-          return nameMatch || countryMatch;
+          const fullCountryName = ISO3_TO_NAME[city.iso3] || city.country || '';
+          const countryMatch = fullCountryName.toLowerCase().includes(lowerTerm);
+          const iso3Match = city.iso3 && city.iso3.toLowerCase().includes(lowerTerm);
+          return nameMatch || countryMatch || iso3Match;
         }).slice(0, 10); // Limit to 10 results
 
         if (matches.length === 0) {
@@ -1264,11 +1266,12 @@
             .style('color', '#333')
             .html(highlightText(city.name, term));
 
+          const fullCountryName = ISO3_TO_NAME[city.iso3] || city.country || city.iso3;
           item.append('div')
             .style('font-size', '11px')
             .style('color', '#999')
             .style('margin-top', '2px')
-            .html(highlightText(city.country, term));
+            .html(highlightText(fullCountryName, term));
         });
 
         dropdown.style('display', 'block');
@@ -1295,8 +1298,10 @@
           const city = g.datum();
 
           const nameMatch = city.name && city.name.toLowerCase().includes(lowerTerm);
-          const countryMatch = city.country && city.country.toLowerCase().includes(lowerTerm);
-          const match = nameMatch || countryMatch;
+          const fullCountryName = ISO3_TO_NAME[city.iso3] || city.country || '';
+          const countryMatch = fullCountryName.toLowerCase().includes(lowerTerm);
+          const iso3Match = city.iso3 && city.iso3.toLowerCase().includes(lowerTerm);
+          const match = nameMatch || countryMatch || iso3Match;
 
           g.select('.trajectory-line')
             .style('stroke-opacity', match ? 0.8 : 0.15)
