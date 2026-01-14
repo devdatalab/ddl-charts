@@ -897,9 +897,13 @@
       // Build initial legend
       rebuildLegend();
 
-      // Search
-      const searchContainer = container.insert('div', 'svg')
+      // Search with dropdown
+      const searchWrapper = container.insert('div', 'svg')
         .style('margin-bottom', '12px')
+        .style('position', 'relative')
+        .style('width', '280px');
+
+      const searchContainer = searchWrapper.append('div')
         .style('display', 'flex')
         .style('align-items', 'center');
 
@@ -934,17 +938,141 @@
         .on('click', function() {
           searchInput.property('value', '');
           clearBtn.style('display', 'none');
+          dropdown.style('display', 'none');
           updateAllTrajectories();
         });
+
+      // Dropdown for search results
+      const dropdown = searchWrapper.append('div')
+        .attr('class', 'search-dropdown')
+        .style('position', 'absolute')
+        .style('top', '100%')
+        .style('left', '24px')
+        .style('width', '220px')
+        .style('max-height', '300px')
+        .style('overflow-y', 'auto')
+        .style('background', 'white')
+        .style('border', '1px solid #ccc')
+        .style('border-top', 'none')
+        .style('border-radius', '0 0 4px 4px')
+        .style('box-shadow', '0 4px 8px rgba(0,0,0,0.1)')
+        .style('z-index', '100')
+        .style('display', 'none');
+
+      let selectedCity = null;
+
+      function highlightText(text, term) {
+        if (!term) return text;
+        const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<strong style="color: #1E88E5;">$1</strong>');
+      }
+
+      function selectCity(city) {
+        selectedCity = city;
+        searchInput.property('value', city.name);
+        dropdown.style('display', 'none');
+        clearBtn.style('display', 'inline');
+
+        // Highlight only this city
+        chartArea.selectAll('.city-group').each(function() {
+          const g = d3.select(this);
+          const c = g.datum();
+          const isSelected = c.id === city.id;
+
+          g.select('.trajectory-line')
+            .style('stroke-opacity', isSelected ? 1 : 0.03)
+            .style('stroke-width', isSelected ? 4 : 1);
+
+          g.select('.marker-start')
+            .style('opacity', isSelected ? 1 : 0.05);
+
+          g.select('.marker-end')
+            .style('opacity', isSelected ? 1 : 0.05);
+
+          g.selectAll('.year-label')
+            .style('opacity', isSelected ? 1 : 0);
+
+          if (isSelected) {
+            g.raise();
+          }
+        });
+      }
+
+      function updateDropdown(term) {
+        dropdown.selectAll('*').remove();
+
+        if (!term || term.trim().length < 1) {
+          dropdown.style('display', 'none');
+          return [];
+        }
+
+        const lowerTerm = term.toLowerCase().trim();
+
+        // Find matching cities
+        const matches = data.cities.filter(city => {
+          const nameMatch = city.name && city.name.toLowerCase().includes(lowerTerm);
+          const countryMatch = city.country && city.country.toLowerCase().includes(lowerTerm);
+          return nameMatch || countryMatch;
+        }).slice(0, 10); // Limit to 10 results
+
+        if (matches.length === 0) {
+          dropdown.append('div')
+            .style('padding', '10px 12px')
+            .style('color', '#999')
+            .style('font-size', '13px')
+            .text('No cities found');
+          dropdown.style('display', 'block');
+          return [];
+        }
+
+        matches.forEach(city => {
+          const item = dropdown.append('div')
+            .attr('class', 'dropdown-item')
+            .style('padding', '8px 12px')
+            .style('cursor', 'pointer')
+            .style('font-size', '13px')
+            .style('border-bottom', '1px solid #f0f0f0')
+            .style('transition', 'background 0.1s ease')
+            .on('mouseenter', function() {
+              d3.select(this).style('background', '#f5f5f5');
+            })
+            .on('mouseleave', function() {
+              d3.select(this).style('background', 'white');
+            })
+            .on('mousedown', function(event) {
+              event.preventDefault(); // Prevent blur before click registers
+              selectCity(city);
+            });
+
+          item.append('div')
+            .style('font-weight', '500')
+            .style('color', '#333')
+            .html(highlightText(city.name, term));
+
+          item.append('div')
+            .style('font-size', '11px')
+            .style('color', '#999')
+            .style('margin-top', '2px')
+            .html(highlightText(city.country, term));
+        });
+
+        dropdown.style('display', 'block');
+        return matches;
+      }
 
       function performSearch(term) {
         if (!term || term.trim() === '') {
           updateAllTrajectories();
           clearBtn.style('display', 'none');
+          dropdown.style('display', 'none');
+          selectedCity = null;
           return;
         }
 
         clearBtn.style('display', 'inline');
+        const matches = updateDropdown(term);
+
+        // Also highlight matching cities on the chart (preview)
         const lowerTerm = term.toLowerCase().trim();
 
         chartArea.selectAll('.city-group').each(function() {
@@ -953,21 +1081,20 @@
 
           const nameMatch = city.name && city.name.toLowerCase().includes(lowerTerm);
           const countryMatch = city.country && city.country.toLowerCase().includes(lowerTerm);
-          const iso3Match = city.iso3 && city.iso3.toLowerCase().includes(lowerTerm);
-          const match = nameMatch || countryMatch || iso3Match;
+          const match = nameMatch || countryMatch;
 
           g.select('.trajectory-line')
-            .style('stroke-opacity', match ? 0.9 : 0.03)
-            .style('stroke-width', match ? 3 : 1);
+            .style('stroke-opacity', match ? 0.7 : 0.03)
+            .style('stroke-width', match ? 2.5 : 1);
 
           g.select('.marker-start')
-            .style('opacity', match ? 1 : 0.05);
+            .style('opacity', match ? 0.8 : 0.05);
 
           g.select('.marker-end')
-            .style('opacity', match ? 1 : 0.05);
+            .style('opacity', match ? 0.8 : 0.05);
 
           g.selectAll('.year-label')
-            .style('opacity', match && isHighlighted(city.iso3) ? 1 : 0);
+            .style('opacity', 0);
 
           if (match) {
             g.raise();
@@ -976,15 +1103,31 @@
       }
 
       searchInput.on('input', function() {
+        selectedCity = null;
         performSearch(this.value);
       });
 
       searchInput.on('focus', function() {
         d3.select(this).style('border-color', '#1E88E5');
+        if (this.value && this.value.trim().length > 0) {
+          updateDropdown(this.value);
+        }
       });
 
       searchInput.on('blur', function() {
         d3.select(this).style('border-color', '#ccc');
+        // Delay hiding dropdown to allow click events to register
+        setTimeout(() => {
+          dropdown.style('display', 'none');
+        }, 150);
+      });
+
+      // Keyboard navigation
+      searchInput.on('keydown', function(event) {
+        if (event.key === 'Escape') {
+          dropdown.style('display', 'none');
+          searchInput.node().blur();
+        }
       });
 
       updateAllTrajectories();
