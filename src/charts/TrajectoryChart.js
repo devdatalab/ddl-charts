@@ -182,14 +182,22 @@ export function createTrajectoryChart(parent, data, options = {}) {
         const isHoveredCity = city.id === hoveredCity.id;
         const cityIsActive = isCityHighlighted(city);
 
+        // Check if city is in same group as hovered city (country or region)
+        const sameGroup = legendMode === 'country'
+          ? city.iso3 === hoveredCity.iso3
+          : ISO3_TO_REGION[city.iso3] === ISO3_TO_REGION[hoveredCity.iso3];
+
         if (isHoveredCity) {
           // Always highlight the hovered city
           g.select('.trajectory-line')
             .style('stroke-width', 4)
             .style('stroke-opacity', 1);
           g.raise();
+        } else if (cityIsActive && sameGroup) {
+          // Same active group as hovered - dim slightly to make hovered stand out
+          g.select('.trajectory-line').style('stroke-opacity', 0.35);
         } else if (cityIsActive) {
-          // Active cities are NOT affected by hover - keep full visibility
+          // Different active group - keep full visibility
           // (do nothing - they maintain their current appearance)
         } else {
           // Dim non-active, non-hovered cities
