@@ -189,8 +189,8 @@ export function createTrajectoryChart(parent, data, options = {}) {
             .style('stroke-opacity', 1);
           g.raise();
         } else if (cityIsActive) {
-          // NEVER dim active/highlighted countries - keep them visible
-          g.select('.trajectory-line').style('stroke-opacity', 0.5);
+          // Active cities are NOT affected by hover - keep full visibility
+          // (do nothing - they maintain their current appearance)
         } else {
           // Dim non-active, non-hovered cities
           g.select('.trajectory-line').style('stroke-opacity', 0.05);
@@ -448,7 +448,8 @@ export function createTrajectoryChart(parent, data, options = {}) {
                 g.select('.trajectory-line').style('stroke-width', 3).style('stroke-opacity', 0.9);
                 g.raise();
               } else if (cityIsActive) {
-                g.select('.trajectory-line').style('stroke-opacity', 0.5);
+                // Active cities are NOT affected by legend hover - keep full visibility
+                // (do nothing - they maintain their current appearance)
               } else {
                 g.select('.trajectory-line').style('stroke-opacity', 0.05);
               }
@@ -532,7 +533,8 @@ export function createTrajectoryChart(parent, data, options = {}) {
                 g.select('.trajectory-line').style('stroke-width', 3).style('stroke-opacity', 0.9);
                 g.raise();
               } else if (cityIsActive) {
-                g.select('.trajectory-line').style('stroke-opacity', 0.5);
+                // Active cities are NOT affected by legend hover - keep full visibility
+                // (do nothing - they maintain their current appearance)
               } else {
                 g.select('.trajectory-line').style('stroke-opacity', 0.05);
               }

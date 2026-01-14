@@ -353,7 +353,7 @@
           .tickFormat(d => d >= 1000 ? `$${d/1000}K` : `$${d}`)
           .tickSize(5)
         )
-        .call(g => g.select('.domain').attr('stroke', '#ccc'))
+        .call(g => g.select('.domain').remove())  // Remove domain line
         .call(g => g.selectAll('.tick line').attr('stroke', '#ccc'))
         .selectAll('text')
         .style('font-size', '11px')
@@ -366,7 +366,7 @@
           .tickFormat(d => d)
           .tickSize(5)
         )
-        .call(g => g.select('.domain').attr('stroke', '#ccc'))
+        .call(g => g.select('.domain').remove())  // Remove domain line
         .call(g => g.selectAll('.tick line').attr('stroke', '#ccc'))
         .selectAll('text')
         .style('font-size', '11px')
@@ -610,8 +610,8 @@
                 .style('stroke-opacity', 1);
               g.raise();
             } else if (cityIsActive) {
-              g.select('.trajectory-line')
-                .style('stroke-opacity', 0.5);
+              // Active cities are NOT affected by hover - keep full visibility
+              // (do nothing - they maintain their current appearance)
             } else {
               g.select('.trajectory-line')
                 .style('stroke-opacity', 0.05);
@@ -842,8 +842,8 @@
                 .style('stroke-opacity', 0.9);
               g.raise();
             } else if (cityIsActive) {
-              g.select('.trajectory-line')
-                .style('stroke-opacity', 0.5);
+              // Active cities are NOT affected by legend hover - keep full visibility
+              // (do nothing - they maintain their current appearance)
             } else {
               g.select('.trajectory-line')
                 .style('stroke-opacity', 0.05);
