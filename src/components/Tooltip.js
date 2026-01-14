@@ -57,17 +57,19 @@ export function hideTooltip(container) {
 
 /**
  * Positions the tooltip at specified coordinates.
- * Adjusts position to keep tooltip within container bounds.
+ * Adjusts position to avoid overlapping the data and keep within container bounds.
+ * By default, positions above and to the side of the cursor to avoid hiding trajectory lines.
  *
  * @param {d3.Selection} container - Container with tooltip
  * @param {number} x - X coordinate
  * @param {number} y - Y coordinate
  * @param {Object} [options] - Positioning options
- * @param {number} [options.offsetX=10] - X offset from pointer
- * @param {number} [options.offsetY=-10] - Y offset from pointer
+ * @param {number} [options.offsetX=20] - X offset from pointer
+ * @param {number} [options.offsetY=10] - Y offset from pointer (when placing above)
+ * @param {boolean} [options.preferAbove=true] - Prefer placing tooltip above cursor
  */
 export function positionTooltip(container, x, y, options = {}) {
-  const { offsetX = 10, offsetY = -10 } = options;
+  const { offsetX = 20, offsetY = 10, preferAbove = true } = options;
 
   const tooltip = container.select('.ddl-tooltip');
   const containerNode = container.node();
@@ -78,17 +80,21 @@ export function positionTooltip(container, x, y, options = {}) {
   const containerRect = containerNode.getBoundingClientRect();
   const tooltipRect = tooltipNode.getBoundingClientRect();
 
-  // Calculate position with offset
-  let left = x + offsetX;
-  let top = y + offsetY;
+  let left, top;
 
-  // Adjust if tooltip would overflow container right edge
-  if (left + tooltipRect.width > containerRect.width) {
+  // Horizontal positioning: prefer right side of cursor, fallback to left
+  if (x + tooltipRect.width + offsetX < containerRect.width) {
+    left = x + offsetX;
+  } else {
     left = x - tooltipRect.width - offsetX;
   }
 
-  // Adjust if tooltip would overflow container bottom edge
-  if (top + tooltipRect.height > containerRect.height) {
+  // Vertical positioning: prefer above cursor to avoid hiding trajectory lines
+  if (preferAbove && y - tooltipRect.height - offsetY > 0) {
+    top = y - tooltipRect.height - offsetY;
+  } else if (y + tooltipRect.height + offsetY < containerRect.height) {
+    top = y + offsetY;
+  } else {
     top = y - tooltipRect.height - offsetY;
   }
 

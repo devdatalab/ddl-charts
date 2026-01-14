@@ -1,7 +1,17 @@
 import * as d3 from 'd3';
 import { createLogScale } from '../core/scales.js';
 import { createXAxis, createYAxis } from '../core/axes.js';
-import { COUNTRY_COLORS, MUTED_COLORS, UI_COLORS, isHighlightedCountry, createColorManager } from '../core/colors.js';
+import {
+  COUNTRY_COLORS,
+  MUTED_COLORS,
+  UI_COLORS,
+  isHighlightedCountry,
+  createColorManager,
+  createRegionColorManager,
+  REGIONS,
+  ISO3_TO_REGION,
+  REGION_COLORS,
+} from '../core/colors.js';
 import { smoothValues } from '../core/utils.js';
 import { createContainer } from '../components/Container.js';
 import { createLegend, updateLegendVisibility } from '../components/Legend.js';
@@ -23,6 +33,7 @@ import { createSearchFilter } from '../components/SearchFilter.js';
  * @param {Object} [options.margin] - Chart margins
  * @param {boolean} [options.showSearch=true] - Show search input
  * @param {boolean} [options.showLegend=true] - Show legend
+ * @param {boolean} [options.showLegendControls=true] - Show legend mode toggle and deselect all button
  * @param {boolean} [options.showGrid=false] - Show grid lines
  * @param {string[]} [options.initialHighlights=['CHN','IND','USA']] - Initial highlighted countries
  * @param {number[]} [options.xTickValues] - Custom X axis tick values
@@ -36,14 +47,19 @@ export function createTrajectoryChart(parent, data, options = {}) {
     margin = { top: 30, right: 250, bottom: 70, left: 90 },
     showSearch = true,
     showLegend = true,
+    showLegendControls = true,
     showGrid = false,
     initialHighlights = ['CHN', 'IND', 'USA'],
     xTickValues = [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000],
     yTickValues = [5, 10, 20, 50, 100, 200],
   } = options;
 
-  // Create color manager for active highlights
+  // Create color managers for active highlights
   const colorManager = createColorManager(initialHighlights);
+  const regionColorManager = createRegionColorManager();
+
+  // Legend mode state: 'country' or 'region'
+  let legendMode = 'country';
 
   // Create container
   const { container, svg, chartArea, dimensions } = createContainer(parent, {
@@ -92,13 +108,31 @@ export function createTrajectoryChart(parent, data, options = {}) {
     .y((d) => yScale(d.pm25))
     .curve(d3.curveCardinal.tension(0.5));
 
+  // Function to check if a city is highlighted (based on current mode)
+  function isCityHighlighted(city) {
+    if (legendMode === 'country') {
+      return colorManager.isHighlighted(city.iso3);
+    } else {
+      return regionColorManager.isCountryInHighlightedRegion(city.iso3);
+    }
+  }
+
+  // Function to get color for a city (based on current mode)
+  function getCityColor(city) {
+    if (legendMode === 'country') {
+      return colorManager.getColor(city.iso3);
+    } else {
+      return regionColorManager.getColor(city.iso3);
+    }
+  }
+
   // Function to update all trajectories based on current highlight state
   function updateAllTrajectories() {
     chartArea.selectAll('.city-group').each(function () {
       const g = d3.select(this);
       const city = g.datum();
-      const highlighted = colorManager.isHighlighted(city.iso3);
-      const color = colorManager.getColor(city.iso3);
+      const highlighted = isCityHighlighted(city);
+      const color = getCityColor(city);
 
       g.select('.trajectory-line')
         .style('stroke', color)
@@ -146,7 +180,7 @@ export function createTrajectoryChart(parent, data, options = {}) {
         const g = d3.select(this);
         const city = g.datum();
         const isHoveredCity = city.id === hoveredCity.id;
-        const cityIsActive = colorManager.isHighlighted(city.iso3);
+        const cityIsActive = isCityHighlighted(city);
 
         if (isHoveredCity) {
           // Always highlight the hovered city
@@ -168,7 +202,7 @@ export function createTrajectoryChart(parent, data, options = {}) {
     })
     .on('mousemove', function (event) {
       const [x, y] = d3.pointer(event, container.node());
-      positionTooltip(container, x, y);
+      positionTooltip(container, x, y, { preferAbove: true });
     })
     .on('mouseleave', function () {
       updateAllTrajectories();
@@ -177,6 +211,8 @@ export function createTrajectoryChart(parent, data, options = {}) {
 
   // Create legend if enabled
   let legendContainerEl = null;
+  let legendItemsContainer = null;
+
   if (showLegend) {
     // Build legend items from unique countries
     const countryMap = new Map();
@@ -197,126 +233,322 @@ export function createTrajectoryChart(parent, data, options = {}) {
       return a.name.localeCompare(b.name);
     });
 
+    // Get unique regions from the data
+    const regionsInData = [...new Set(data.cities.map((c) => ISO3_TO_REGION[c.iso3]).filter(Boolean))];
+    const sortedRegions = regionsInData.sort((a, b) => a.localeCompare(b));
+
     // Create legend container positioned to the right
     legendContainerEl = container
       .append('div')
       .style('position', 'absolute')
       .style('top', `${margin.top + 10}px`)
       .style('right', '20px')
-      .style('max-height', `${dimensions.innerHeight - 20}px`)
-      .style('overflow-y', 'auto')
       .style('background', 'white')
       .style('border-radius', '4px')
       .style('padding', '8px 0')
-      .style('width', '180px');
+      .style('width', '190px');
 
-    // Function to update legend appearance
-    function updateLegend() {
-      legendContainerEl.selectAll('.legend-item').each(function () {
-        const item = d3.select(this);
-        const iso3 = item.attr('data-iso3');
-        const highlighted = colorManager.isHighlighted(iso3);
-        const color = colorManager.getColor(iso3);
+    // Create controls container (mode toggle + deselect all)
+    if (showLegendControls) {
+      const controlsContainer = legendContainerEl
+        .append('div')
+        .style('padding', '0 12px 8px')
+        .style('border-bottom', `1px solid ${UI_COLORS.gridLight}`)
+        .style('margin-bottom', '8px');
 
-        item
-          .select('.legend-marker')
-          .style('background-color', color)
-          .style('opacity', highlighted ? 1 : 0.4);
+      // Mode toggle buttons
+      const modeToggle = controlsContainer.append('div').style('display', 'flex').style('gap', '4px').style('margin-bottom', '8px');
 
-        item
-          .select('.legend-label')
-          .style('font-weight', highlighted ? '600' : '400')
-          .style('color', highlighted ? UI_COLORS.text : UI_COLORS.textLight);
+      const countryModeBtn = modeToggle
+        .append('button')
+        .attr('class', 'mode-btn')
+        .style('flex', '1')
+        .style('padding', '4px 8px')
+        .style('font-size', '11px')
+        .style('border', `1px solid ${UI_COLORS.border}`)
+        .style('border-radius', '4px')
+        .style('cursor', 'pointer')
+        .style('background', legendMode === 'country' ? UI_COLORS.text : 'white')
+        .style('color', legendMode === 'country' ? 'white' : UI_COLORS.text)
+        .style('font-weight', legendMode === 'country' ? '600' : '400')
+        .text('Country');
+
+      const regionModeBtn = modeToggle
+        .append('button')
+        .attr('class', 'mode-btn')
+        .style('flex', '1')
+        .style('padding', '4px 8px')
+        .style('font-size', '11px')
+        .style('border', `1px solid ${UI_COLORS.border}`)
+        .style('border-radius', '4px')
+        .style('cursor', 'pointer')
+        .style('background', legendMode === 'region' ? UI_COLORS.text : 'white')
+        .style('color', legendMode === 'region' ? 'white' : UI_COLORS.text)
+        .style('font-weight', legendMode === 'region' ? '600' : '400')
+        .text('Region');
+
+      // Deselect All button
+      const deselectAllBtn = controlsContainer
+        .append('button')
+        .style('width', '100%')
+        .style('padding', '4px 8px')
+        .style('font-size', '11px')
+        .style('border', `1px solid ${UI_COLORS.border}`)
+        .style('border-radius', '4px')
+        .style('cursor', 'pointer')
+        .style('background', 'white')
+        .style('color', UI_COLORS.text)
+        .text('Deselect All');
+
+      // Mode toggle handlers
+      countryModeBtn.on('click', function () {
+        if (legendMode !== 'country') {
+          legendMode = 'country';
+          countryModeBtn.style('background', UI_COLORS.text).style('color', 'white').style('font-weight', '600');
+          regionModeBtn.style('background', 'white').style('color', UI_COLORS.text).style('font-weight', '400');
+          renderLegendItems();
+          updateAllTrajectories();
+        }
+      });
+
+      regionModeBtn.on('click', function () {
+        if (legendMode !== 'region') {
+          legendMode = 'region';
+          regionModeBtn.style('background', UI_COLORS.text).style('color', 'white').style('font-weight', '600');
+          countryModeBtn.style('background', 'white').style('color', UI_COLORS.text).style('font-weight', '400');
+          renderLegendItems();
+          updateAllTrajectories();
+        }
+      });
+
+      // Deselect All handler
+      deselectAllBtn.on('click', function () {
+        if (legendMode === 'country') {
+          colorManager.clearHighlights();
+        } else {
+          regionColorManager.clearHighlights();
+        }
+        updateLegend();
+        updateAllTrajectories();
       });
     }
 
-    // Create legend items
-    sortedCountries.forEach((country) => {
-      const highlighted = colorManager.isHighlighted(country.iso3);
-      const color = colorManager.getColor(country.iso3);
+    // Scrollable legend items container
+    legendItemsContainer = legendContainerEl
+      .append('div')
+      .attr('class', 'legend-items')
+      .style('max-height', `${dimensions.innerHeight - (showLegendControls ? 90 : 20)}px`)
+      .style('overflow-y', 'auto');
 
-      const item = legendContainerEl
-        .append('div')
-        .attr('class', 'legend-item')
-        .attr('data-iso3', country.iso3)
-        .style('display', 'flex')
-        .style('align-items', 'center')
-        .style('padding', '5px 12px')
-        .style('cursor', 'pointer')
-        .style('border-radius', '4px')
-        .style('transition', 'background-color 0.15s ease');
+    // Function to update legend appearance
+    function updateLegend() {
+      if (legendMode === 'country') {
+        legendItemsContainer.selectAll('.legend-item').each(function () {
+          const item = d3.select(this);
+          const iso3 = item.attr('data-iso3');
+          const highlighted = colorManager.isHighlighted(iso3);
+          const color = colorManager.getColor(iso3);
 
-      item
-        .append('div')
-        .attr('class', 'legend-marker')
-        .style('width', '12px')
-        .style('height', '12px')
-        .style('border-radius', '2px')
-        .style('margin-right', '8px')
-        .style('background-color', color)
-        .style('opacity', highlighted ? 1 : 0.4)
-        .style('flex-shrink', 0)
-        .style('transition', 'all 0.15s ease');
+          item.select('.legend-marker').style('background-color', color).style('opacity', highlighted ? 1 : 0.4);
 
-      item
-        .append('span')
-        .attr('class', 'legend-label')
-        .style('font-size', '12px')
-        .style('color', highlighted ? UI_COLORS.text : UI_COLORS.textLight)
-        .style('font-weight', highlighted ? '600' : '400')
-        .style('white-space', 'nowrap')
-        .style('overflow', 'hidden')
-        .style('text-overflow', 'ellipsis')
-        .style('transition', 'all 0.15s ease')
-        .text(country.name);
-
-      // Click to toggle highlight
-      item.on('click', function () {
-        colorManager.toggleHighlight(country.iso3);
-        updateAllTrajectories();
-        updateLegend();
-
-        // Re-sort: bring highlighted to front
-        chartArea.selectAll('.city-group').sort((a, b) => {
-          const aH = colorManager.isHighlighted(a.iso3) ? 1 : 0;
-          const bH = colorManager.isHighlighted(b.iso3) ? 1 : 0;
-          return aH - bH;
+          item
+            .select('.legend-label')
+            .style('font-weight', highlighted ? '600' : '400')
+            .style('color', highlighted ? UI_COLORS.text : UI_COLORS.textLight);
         });
-      });
+      } else {
+        legendItemsContainer.selectAll('.legend-item').each(function () {
+          const item = d3.select(this);
+          const region = item.attr('data-region');
+          const highlighted = regionColorManager.isRegionHighlighted(region);
+          const color = regionColorManager.getRegionColor(region);
 
-      // LEGEND HOVER - RESPECTS ACTIVE STATE
-      item.on('mouseenter', function () {
-        d3.select(this).style('background-color', 'rgba(0,0,0,0.05)');
+          item.select('.legend-marker').style('background-color', highlighted ? color : MUTED_COLORS.line).style('opacity', highlighted ? 1 : 0.4);
 
-        const hoveredIso3 = country.iso3;
-
-        chartArea.selectAll('.city-group').each(function () {
-          const g = d3.select(this);
-          const city = g.datum();
-          const isHoveredCountry = city.iso3 === hoveredIso3;
-          const cityIsActive = colorManager.isHighlighted(city.iso3);
-
-          if (isHoveredCountry) {
-            // Highlight hovered country's cities
-            g.select('.trajectory-line')
-              .style('stroke-width', 3)
-              .style('stroke-opacity', 0.9);
-            g.raise();
-          } else if (cityIsActive) {
-            // Keep active countries visible (don't dim them)
-            g.select('.trajectory-line').style('stroke-opacity', 0.5);
-          } else {
-            // Dim non-active, non-hovered cities
-            g.select('.trajectory-line').style('stroke-opacity', 0.05);
-          }
+          item
+            .select('.legend-label')
+            .style('font-weight', highlighted ? '600' : '400')
+            .style('color', highlighted ? UI_COLORS.text : UI_COLORS.textLight);
         });
-      });
+      }
+    }
 
-      item.on('mouseleave', function () {
-        d3.select(this).style('background-color', 'transparent');
-        updateAllTrajectories();
-      });
-    });
+    // Function to render legend items based on current mode
+    function renderLegendItems() {
+      legendItemsContainer.selectAll('.legend-item').remove();
+
+      if (legendMode === 'country') {
+        // Render country items
+        sortedCountries.forEach((country) => {
+          const highlighted = colorManager.isHighlighted(country.iso3);
+          const color = colorManager.getColor(country.iso3);
+
+          const item = legendItemsContainer
+            .append('div')
+            .attr('class', 'legend-item')
+            .attr('data-iso3', country.iso3)
+            .style('display', 'flex')
+            .style('align-items', 'center')
+            .style('padding', '5px 12px')
+            .style('cursor', 'pointer')
+            .style('border-radius', '4px')
+            .style('transition', 'background-color 0.15s ease');
+
+          item
+            .append('div')
+            .attr('class', 'legend-marker')
+            .style('width', '12px')
+            .style('height', '12px')
+            .style('border-radius', '2px')
+            .style('margin-right', '8px')
+            .style('background-color', color)
+            .style('opacity', highlighted ? 1 : 0.4)
+            .style('flex-shrink', 0)
+            .style('transition', 'all 0.15s ease');
+
+          item
+            .append('span')
+            .attr('class', 'legend-label')
+            .style('font-size', '12px')
+            .style('color', highlighted ? UI_COLORS.text : UI_COLORS.textLight)
+            .style('font-weight', highlighted ? '600' : '400')
+            .style('white-space', 'nowrap')
+            .style('overflow', 'hidden')
+            .style('text-overflow', 'ellipsis')
+            .style('transition', 'all 0.15s ease')
+            .text(country.name);
+
+          // Click to toggle highlight
+          item.on('click', function () {
+            colorManager.toggleHighlight(country.iso3);
+            updateAllTrajectories();
+            updateLegend();
+
+            // Re-sort: bring highlighted to front
+            chartArea.selectAll('.city-group').sort((a, b) => {
+              const aH = isCityHighlighted(a) ? 1 : 0;
+              const bH = isCityHighlighted(b) ? 1 : 0;
+              return aH - bH;
+            });
+          });
+
+          // LEGEND HOVER - RESPECTS ACTIVE STATE
+          item.on('mouseenter', function () {
+            d3.select(this).style('background-color', 'rgba(0,0,0,0.05)');
+
+            const hoveredIso3 = country.iso3;
+
+            chartArea.selectAll('.city-group').each(function () {
+              const g = d3.select(this);
+              const city = g.datum();
+              const isHoveredCountry = city.iso3 === hoveredIso3;
+              const cityIsActive = isCityHighlighted(city);
+
+              if (isHoveredCountry) {
+                g.select('.trajectory-line').style('stroke-width', 3).style('stroke-opacity', 0.9);
+                g.raise();
+              } else if (cityIsActive) {
+                g.select('.trajectory-line').style('stroke-opacity', 0.5);
+              } else {
+                g.select('.trajectory-line').style('stroke-opacity', 0.05);
+              }
+            });
+          });
+
+          item.on('mouseleave', function () {
+            d3.select(this).style('background-color', 'transparent');
+            updateAllTrajectories();
+          });
+        });
+      } else {
+        // Render region items
+        sortedRegions.forEach((region) => {
+          const highlighted = regionColorManager.isRegionHighlighted(region);
+          const color = highlighted ? regionColorManager.getRegionColor(region) : MUTED_COLORS.line;
+
+          const item = legendItemsContainer
+            .append('div')
+            .attr('class', 'legend-item')
+            .attr('data-region', region)
+            .style('display', 'flex')
+            .style('align-items', 'center')
+            .style('padding', '5px 12px')
+            .style('cursor', 'pointer')
+            .style('border-radius', '4px')
+            .style('transition', 'background-color 0.15s ease');
+
+          item
+            .append('div')
+            .attr('class', 'legend-marker')
+            .style('width', '12px')
+            .style('height', '12px')
+            .style('border-radius', '2px')
+            .style('margin-right', '8px')
+            .style('background-color', color)
+            .style('opacity', highlighted ? 1 : 0.4)
+            .style('flex-shrink', 0)
+            .style('transition', 'all 0.15s ease');
+
+          item
+            .append('span')
+            .attr('class', 'legend-label')
+            .style('font-size', '12px')
+            .style('color', highlighted ? UI_COLORS.text : UI_COLORS.textLight)
+            .style('font-weight', highlighted ? '600' : '400')
+            .style('white-space', 'nowrap')
+            .style('overflow', 'hidden')
+            .style('text-overflow', 'ellipsis')
+            .style('transition', 'all 0.15s ease')
+            .text(region);
+
+          // Click to toggle region highlight
+          item.on('click', function () {
+            regionColorManager.toggleRegion(region);
+            updateAllTrajectories();
+            updateLegend();
+
+            // Re-sort: bring highlighted to front
+            chartArea.selectAll('.city-group').sort((a, b) => {
+              const aH = isCityHighlighted(a) ? 1 : 0;
+              const bH = isCityHighlighted(b) ? 1 : 0;
+              return aH - bH;
+            });
+          });
+
+          // LEGEND HOVER - RESPECTS ACTIVE STATE
+          item.on('mouseenter', function () {
+            d3.select(this).style('background-color', 'rgba(0,0,0,0.05)');
+
+            const hoveredRegion = region;
+
+            chartArea.selectAll('.city-group').each(function () {
+              const g = d3.select(this);
+              const city = g.datum();
+              const cityRegion = ISO3_TO_REGION[city.iso3];
+              const isHoveredRegion = cityRegion === hoveredRegion;
+              const cityIsActive = isCityHighlighted(city);
+
+              if (isHoveredRegion) {
+                g.select('.trajectory-line').style('stroke-width', 3).style('stroke-opacity', 0.9);
+                g.raise();
+              } else if (cityIsActive) {
+                g.select('.trajectory-line').style('stroke-opacity', 0.5);
+              } else {
+                g.select('.trajectory-line').style('stroke-opacity', 0.05);
+              }
+            });
+          });
+
+          item.on('mouseleave', function () {
+            d3.select(this).style('background-color', 'transparent');
+            updateAllTrajectories();
+          });
+        });
+      }
+    }
+
+    // Initial render
+    renderLegendItems();
   }
 
   // Create search if enabled
@@ -350,7 +582,7 @@ export function createTrajectoryChart(parent, data, options = {}) {
 
           g.select('.marker-end').style('opacity', match ? 1 : 0.05);
 
-          g.selectAll('.year-label').style('opacity', match && colorManager.isHighlighted(city.iso3) ? 1 : 0);
+          g.selectAll('.year-label').style('opacity', match && isCityHighlighted(city) ? 1 : 0);
         });
       },
     });
@@ -360,9 +592,23 @@ export function createTrajectoryChart(parent, data, options = {}) {
     container,
     svg,
     colorManager,
+    regionColorManager,
     updateAllTrajectories,
     toggleHighlight: (iso3) => {
       colorManager.toggleHighlight(iso3);
+      updateAllTrajectories();
+    },
+    toggleRegion: (region) => {
+      regionColorManager.toggleRegion(region);
+      updateAllTrajectories();
+    },
+    getLegendMode: () => legendMode,
+    deselectAll: () => {
+      if (legendMode === 'country') {
+        colorManager.clearHighlights();
+      } else {
+        regionColorManager.clearHighlights();
+      }
       updateAllTrajectories();
     },
   };
