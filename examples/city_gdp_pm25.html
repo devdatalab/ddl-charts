@@ -1186,26 +1186,44 @@
       }
 
       // Highlight a single city (used for dropdown hover preview)
-      function highlightSingleCity(city) {
+      // Matches the same visual state as hovering directly on the chart
+      function highlightSingleCity(targetCity) {
         linesLayer.selectAll('.city-group').each(function() {
           const g = d3.select(this);
-          const c = g.datum();
-          const mg = getMarkerGroup(c.id);
-          const isTarget = c.id === city.id;
-
-          g.select('.trajectory-line')
-            .style('stroke-opacity', isTarget ? 1 : 0.1)
-            .style('stroke-width', isTarget ? 4 : 1.5);
-
-          mg.select('.marker-start')
-            .style('opacity', isTarget ? 1 : 0.1);
-
-          mg.select('.marker-end')
-            .style('opacity', isTarget ? 1 : 0.1);
+          const city = g.datum();
+          const mg = getMarkerGroup(city.id);
+          const isTarget = city.id === targetCity.id;
+          const cityIsActive = isHighlighted(city.iso3);
 
           if (isTarget) {
+            // Target city: full opacity, thicker line
+            // If not highlighted (gray), switch to solid color
+            if (!cityIsActive) {
+              g.select('.trajectory-line')
+                .style('stroke', UI_COLORS.mutedSolid);
+              mg.select('.marker-start')
+                .style('fill', UI_COLORS.mutedSolid);
+              mg.select('.marker-end')
+                .style('stroke', UI_COLORS.mutedSolid);
+            }
+            g.select('.trajectory-line')
+              .style('stroke-width', 4)
+              .style('stroke-opacity', 1);
+            mg.select('.marker-start')
+              .style('opacity', 1);
+            mg.select('.marker-end')
+              .style('opacity', 1);
             g.raise();
             mg.raise();
+          } else {
+            // Dim all other cities
+            g.select('.trajectory-line')
+              .style('stroke-opacity', 0.1)
+              .style('stroke-width', 1.5);
+            mg.select('.marker-start')
+              .style('opacity', 0.1);
+            mg.select('.marker-end')
+              .style('opacity', 0.1);
           }
         });
       }
@@ -1314,6 +1332,7 @@
           const g = d3.select(this);
           const city = g.datum();
           const mg = getMarkerGroup(city.id);
+          const color = getItemColor(city.iso3);
 
           const nameMatch = city.name && city.name.toLowerCase().includes(lowerTerm);
           const fullCountryName = ISO3_TO_NAME[city.iso3] || city.country || '';
@@ -1321,14 +1340,18 @@
           const iso3Match = city.iso3 && city.iso3.toLowerCase().includes(lowerTerm);
           const match = nameMatch || countryMatch || iso3Match;
 
+          // Reset colors and set opacity based on match
           g.select('.trajectory-line')
+            .style('stroke', color)
             .style('stroke-opacity', match ? 0.8 : 0.15)
             .style('stroke-width', match ? 2.5 : 1.5);
 
           mg.select('.marker-start')
+            .style('fill', color)
             .style('opacity', match ? 0.9 : 0.2);
 
           mg.select('.marker-end')
+            .style('stroke', color)
             .style('opacity', match ? 0.9 : 0.2);
 
           if (match) {
