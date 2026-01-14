@@ -48,6 +48,7 @@
       border-radius: 8px;
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
       padding: 20px;
+      position: relative;
     }
 
     /* Loading state */
@@ -57,42 +58,6 @@
       justify-content: center;
       height: 500px;
       color: #666;
-    }
-
-    /* OWID-style overrides */
-    .ddl-chart-container {
-      position: relative;
-    }
-
-    .ddl-legend {
-      background: white;
-      border-radius: 4px;
-      padding: 8px 0;
-      max-width: 200px;
-    }
-
-    .ddl-tooltip {
-      z-index: 1000;
-    }
-
-    .ddl-search input {
-      width: 200px;
-    }
-
-    /* Axis styling */
-    .x-axis path,
-    .y-axis path {
-      stroke: #ccc;
-    }
-
-    .x-axis line,
-    .y-axis line {
-      stroke: #e5e5e5;
-    }
-
-    .grid-line {
-      stroke: #f0f0f0;
-      stroke-dasharray: 2, 2;
     }
 
     /* Footer */
@@ -118,7 +83,7 @@
 <body>
   <div class="page-header">
     <h1>City GDP per Capita vs PM2.5 Trajectories</h1>
-    <p>Showing trajectories of cities with population > 1 million from 2013–2023. Click legend items to toggle, hover for details.</p>
+    <p>Showing trajectories of cities with population > 1 million from 2013–2023. Click legend to highlight countries, hover trajectories for details.</p>
   </div>
 
   <div id="chart-container">
@@ -134,71 +99,73 @@
   <script src="https://d3js.org/d3.v7.min.js"></script>
 
   <script type="module">
-    // Import from our modules (requires running with a local server)
-    // For standalone deployment, these would be bundled
-
-    // ============================================
-    // INLINE MODULE CODE (for standalone HTML)
-    // ============================================
-
     // === COLORS ===
-    const PRIMARY_COLORS = {
-      red: '#E53935',
-      gold: '#FFD700',
-      blue: '#1E88E5',
-    };
+    const HIGHLIGHT_COLORS = [
+      '#E53935', // Red
+      '#1E88E5', // Blue
+      '#43A047', // Green
+      '#FB8C00', // Orange
+      '#8E24AA', // Purple
+      '#00ACC1', // Teal
+      '#D81B60', // Pink
+      '#FFD700', // Gold
+    ];
 
-    const COUNTRY_COLORS = {
-      CHN: PRIMARY_COLORS.red,
-      IND: PRIMARY_COLORS.gold,
-      USA: PRIMARY_COLORS.blue,
+    const DEFAULT_COUNTRY_COLORS = {
+      CHN: '#E53935',
+      IND: '#FFD700',
+      USA: '#1E88E5',
     };
 
     const UI_COLORS = {
-      background: '#ffffff',
       text: '#5b5b5b',
       textLight: '#999999',
-      grid: '#e0e0e0',
-      gridLight: '#f0f0f0',
-      border: '#cccccc',
-      hover: 'rgba(0, 0, 0, 0.05)',
+      muted: 'rgba(150, 150, 150, 0.25)',
+      mutedMarker: 'rgba(150, 150, 150, 0.5)',
     };
 
-    const MUTED_COLORS = {
-      line: 'rgba(150, 150, 150, 0.3)',
-      marker: 'rgba(150, 150, 150, 0.7)',
-    };
-
-    function isHighlightedCountry(iso3) {
-      return iso3 in COUNTRY_COLORS;
-    }
+    // Track which countries are actively highlighted
+    let activeHighlights = new Set(['CHN', 'IND', 'USA']); // Default highlighted
+    let colorAssignments = new Map(); // iso3 -> color
+    let nextColorIndex = 3; // Start after default colors
 
     function getCountryColor(iso3) {
-      return COUNTRY_COLORS[iso3] || MUTED_COLORS.line;
+      if (activeHighlights.has(iso3)) {
+        if (!colorAssignments.has(iso3)) {
+          // Assign a color
+          if (DEFAULT_COUNTRY_COLORS[iso3]) {
+            colorAssignments.set(iso3, DEFAULT_COUNTRY_COLORS[iso3]);
+          } else {
+            colorAssignments.set(iso3, HIGHLIGHT_COLORS[nextColorIndex % HIGHLIGHT_COLORS.length]);
+            nextColorIndex++;
+          }
+        }
+        return colorAssignments.get(iso3);
+      }
+      return UI_COLORS.muted;
+    }
+
+    function isHighlighted(iso3) {
+      return activeHighlights.has(iso3);
     }
 
     // === UTILITIES ===
     function smoothValues(values, windowSize = 3) {
       if (values.length <= 2) return [...values];
-
       const result = [];
       const halfWindow = Math.floor(windowSize / 2);
-
       for (let i = 0; i < values.length; i++) {
         if (i === 0 || i === values.length - 1) {
           result.push(values[i]);
           continue;
         }
-
-        let sum = 0;
-        let count = 0;
+        let sum = 0, count = 0;
         for (let j = Math.max(0, i - halfWindow); j <= Math.min(values.length - 1, i + halfWindow); j++) {
           sum += values[j];
           count++;
         }
         result.push(sum / count);
       }
-
       return result;
     }
 
@@ -231,12 +198,6 @@
       const innerWidth = width - margin.left - margin.right;
       const innerHeight = height - margin.top - margin.bottom;
 
-      // Track visibility state
-      const visibilityState = {};
-      data.cities.forEach(city => {
-        visibilityState[city.iso3] = true;
-      });
-
       // Create SVG
       const svg = container
         .append('svg')
@@ -252,50 +213,61 @@
       // Scales
       const xScale = d3.scaleLog()
         .domain([data.bounds.gdp.min * 0.9, data.bounds.gdp.max * 1.1])
-        .range([0, innerWidth])
-        .nice();
+        .range([0, innerWidth]);
 
       const yScale = d3.scaleLog()
         .domain([data.bounds.pm25.min * 0.9, data.bounds.pm25.max * 1.1])
-        .range([innerHeight, 0])
-        .nice();
+        .range([innerHeight, 0]);
+
+      // Custom tick values for cleaner X-axis (powers of 10 and midpoints)
+      const xTickValues = [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000];
+      const yTickValues = [5, 10, 20, 50, 100, 200];
 
       // Grid lines
       chartArea.append('g')
         .attr('class', 'grid x-grid')
         .attr('transform', `translate(0,${innerHeight})`)
         .call(d3.axisBottom(xScale)
+          .tickValues(xTickValues)
           .tickSize(-innerHeight)
           .tickFormat('')
         )
+        .call(g => g.select('.domain').remove())
         .selectAll('line')
         .style('stroke', '#f0f0f0');
 
       chartArea.append('g')
         .attr('class', 'grid y-grid')
         .call(d3.axisLeft(yScale)
+          .tickValues(yTickValues)
           .tickSize(-innerWidth)
           .tickFormat('')
         )
+        .call(g => g.select('.domain').remove())
         .selectAll('line')
         .style('stroke', '#f0f0f0');
 
-      // Remove grid domain lines
-      chartArea.selectAll('.grid .domain').remove();
-
-      // Axes
-      const xAxis = chartArea.append('g')
+      // Axes with limited ticks
+      chartArea.append('g')
         .attr('class', 'x-axis')
         .attr('transform', `translate(0,${innerHeight})`)
         .call(d3.axisBottom(xScale)
+          .tickValues(xTickValues)
           .tickFormat(d => d >= 1000 ? `$${d/1000}K` : `$${d}`)
-        );
+        )
+        .call(g => g.select('.domain').style('stroke', '#ccc'))
+        .selectAll('text')
+        .style('font-size', '11px');
 
-      const yAxis = chartArea.append('g')
+      chartArea.append('g')
         .attr('class', 'y-axis')
         .call(d3.axisLeft(yScale)
-          .tickFormat(d => d.toFixed(0))
-        );
+          .tickValues(yTickValues)
+          .tickFormat(d => d)
+        )
+        .call(g => g.select('.domain').style('stroke', '#ccc'))
+        .selectAll('text')
+        .style('font-size', '11px');
 
       // Axis labels
       svg.append('text')
@@ -321,11 +293,38 @@
         .y(d => yScale(d.pm25))
         .curve(d3.curveCardinal.tension(0.5));
 
-      // Render trajectories
-      const highlightedCities = data.cities.filter(c => isHighlightedCountry(c.iso3));
-      const otherCities = data.cities.filter(c => !isHighlightedCountry(c.iso3));
+      // Function to update all trajectories based on highlight state
+      function updateAllTrajectories() {
+        chartArea.selectAll('.city-group').each(function() {
+          const g = d3.select(this);
+          const city = g.datum();
+          const highlighted = isHighlighted(city.iso3);
+          const color = getCountryColor(city.iso3);
 
-      function renderCity(city, isHighlighted) {
+          g.select('.trajectory-line')
+            .style('stroke', color)
+            .style('stroke-width', highlighted ? 2.5 : 1)
+            .style('stroke-opacity', highlighted ? 0.9 : 0.3);
+
+          g.select('.marker-start')
+            .style('fill', color)
+            .attr('r', highlighted ? 4 : 2.5)
+            .style('opacity', highlighted ? 1 : 0.4);
+
+          g.select('.marker-end')
+            .style('stroke', color)
+            .style('fill', highlighted ? 'white' : color)
+            .style('opacity', highlighted ? 1 : 0.4);
+
+          g.selectAll('.year-label')
+            .style('opacity', highlighted ? 1 : 0)
+            .style('fill', color);
+        });
+      }
+
+      // Render all cities
+      function renderCity(city) {
+        const highlighted = isHighlighted(city.iso3);
         const color = getCountryColor(city.iso3);
 
         // Smooth trajectory
@@ -351,9 +350,9 @@
           .attr('d', line(smoothedTrajectory))
           .style('fill', 'none')
           .style('stroke', color)
-          .style('stroke-width', isHighlighted ? 3 : 1.5)
-          .style('stroke-opacity', isHighlighted ? 1 : 0.35)
-          .style('transition', 'stroke-width 0.15s ease, stroke-opacity 0.15s ease');
+          .style('stroke-width', highlighted ? 2.5 : 1)
+          .style('stroke-opacity', highlighted ? 0.9 : 0.3)
+          .style('transition', 'stroke-width 0.15s ease, stroke-opacity 0.15s ease, stroke 0.15s ease');
 
         // Start marker
         const start = city.trajectory[0];
@@ -361,56 +360,65 @@
           .attr('class', 'marker-start')
           .attr('cx', xScale(start.gdp))
           .attr('cy', yScale(start.pm25))
-          .attr('r', isHighlighted ? 5 : 3)
+          .attr('r', highlighted ? 4 : 2.5)
           .style('fill', color)
-          .style('opacity', isHighlighted ? 1 : 0.5);
+          .style('opacity', highlighted ? 1 : 0.4)
+          .style('transition', 'all 0.15s ease');
 
         // End marker (triangle)
         const end = city.trajectory[city.trajectory.length - 1];
-        const size = isHighlighted ? 6 : 4;
+        const size = highlighted ? 5 : 3;
         const triangle = d3.symbol().type(d3.symbolTriangle).size(size * size * 2);
 
         cityGroup.append('path')
           .attr('class', 'marker-end')
           .attr('d', triangle)
           .attr('transform', `translate(${xScale(end.gdp)},${yScale(end.pm25)})`)
-          .style('fill', 'white')
+          .style('fill', highlighted ? 'white' : color)
           .style('stroke', color)
-          .style('stroke-width', isHighlighted ? 2 : 1.5)
-          .style('opacity', isHighlighted ? 1 : 0.5);
+          .style('stroke-width', highlighted ? 1.5 : 1)
+          .style('opacity', highlighted ? 1 : 0.4)
+          .style('transition', 'all 0.15s ease');
 
-        // Year labels for highlighted cities
-        if (isHighlighted) {
-          cityGroup.append('text')
-            .attr('x', xScale(start.gdp))
-            .attr('y', yScale(start.pm25) - 10)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '10px')
-            .style('fill', color)
-            .style('font-weight', '600')
-            .text(city.yearStart);
+        // Year labels (always add, control visibility via opacity)
+        cityGroup.append('text')
+          .attr('class', 'year-label year-start')
+          .attr('x', xScale(start.gdp))
+          .attr('y', yScale(start.pm25) - 8)
+          .attr('text-anchor', 'middle')
+          .style('font-size', '10px')
+          .style('fill', color)
+          .style('font-weight', '600')
+          .style('opacity', highlighted ? 1 : 0)
+          .style('transition', 'opacity 0.15s ease')
+          .text(city.yearStart);
 
-          cityGroup.append('text')
-            .attr('x', xScale(end.gdp))
-            .attr('y', yScale(end.pm25) - 10)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '10px')
-            .style('fill', color)
-            .style('font-weight', '600')
-            .text(city.yearEnd);
-        }
+        cityGroup.append('text')
+          .attr('class', 'year-label year-end')
+          .attr('x', xScale(end.gdp))
+          .attr('y', yScale(end.pm25) - 8)
+          .attr('text-anchor', 'middle')
+          .style('font-size', '10px')
+          .style('fill', color)
+          .style('font-weight', '600')
+          .style('opacity', highlighted ? 1 : 0)
+          .style('transition', 'opacity 0.15s ease')
+          .text(city.yearEnd);
 
         return cityGroup;
       }
 
-      // Render non-highlighted first (background)
-      otherCities.forEach(city => renderCity(city, false));
-      // Render highlighted on top
-      highlightedCities.forEach(city => renderCity(city, true));
+      // Sort cities: non-highlighted first (background), then highlighted (foreground)
+      const sortedCities = [...data.cities].sort((a, b) => {
+        const aH = isHighlighted(a.iso3) ? 1 : 0;
+        const bH = isHighlighted(b.iso3) ? 1 : 0;
+        return aH - bH;
+      });
+
+      sortedCities.forEach(city => renderCity(city));
 
       // Tooltip
       const tooltip = container.append('div')
-        .attr('class', 'ddl-tooltip')
         .style('position', 'absolute')
         .style('pointer-events', 'none')
         .style('background', 'rgba(255,255,255,0.97)')
@@ -420,7 +428,8 @@
         .style('box-shadow', '0 2px 8px rgba(0,0,0,0.15)')
         .style('font-size', '13px')
         .style('opacity', 0)
-        .style('z-index', 1000);
+        .style('z-index', 1000)
+        .style('transition', 'opacity 0.1s ease');
 
       function showTooltip(city, event) {
         const gdpChange = ((city.gdpEnd - city.gdpStart) / city.gdpStart * 100).toFixed(0);
@@ -441,10 +450,21 @@
           </div>
         `);
 
+        const containerRect = container.node().getBoundingClientRect();
         const [x, y] = d3.pointer(event, container.node());
+
+        let left = x + 15;
+        let top = y - 10;
+
+        // Keep tooltip in bounds
+        const tooltipWidth = 220;
+        if (left + tooltipWidth > containerRect.width - 20) {
+          left = x - tooltipWidth - 15;
+        }
+
         tooltip
-          .style('left', (x + 15) + 'px')
-          .style('top', (y - 10) + 'px')
+          .style('left', left + 'px')
+          .style('top', top + 'px')
           .style('opacity', 1);
       }
 
@@ -454,19 +474,26 @@
 
       // Hover interactions
       chartArea.selectAll('.city-group')
+        .style('cursor', 'pointer')
         .on('mouseenter', function(event) {
           const city = d3.select(this).datum();
 
-          // Highlight this city
+          // Highlight this city, dim others
           chartArea.selectAll('.city-group').each(function() {
             const g = d3.select(this);
             const isThis = g.datum().id === city.id;
-            g.select('.trajectory-line')
-              .style('stroke-width', isThis ? 5 : 1)
-              .style('stroke-opacity', isThis ? 1 : 0.1);
+
+            if (isThis) {
+              g.select('.trajectory-line')
+                .style('stroke-width', 4)
+                .style('stroke-opacity', 1);
+              g.raise();
+            } else {
+              g.select('.trajectory-line')
+                .style('stroke-opacity', 0.08);
+            }
           });
 
-          d3.select(this).raise();
           showTooltip(city, event);
         })
         .on('mousemove', function(event) {
@@ -474,28 +501,22 @@
           showTooltip(city, event);
         })
         .on('mouseleave', function() {
-          // Reset to default
-          chartArea.selectAll('.city-group').each(function() {
-            const g = d3.select(this);
-            const city = g.datum();
-            const highlighted = isHighlightedCountry(city.iso3);
-            g.select('.trajectory-line')
-              .style('stroke-width', highlighted ? 3 : 1.5)
-              .style('stroke-opacity', highlighted ? 1 : 0.35);
-          });
+          // Reset to current highlight state
+          updateAllTrajectories();
           hideTooltip();
         });
 
       // Legend
       const legendContainer = container.append('div')
         .style('position', 'absolute')
-        .style('top', (margin.top + 20) + 'px')
-        .style('right', '30px')
-        .style('max-height', (innerHeight - 40) + 'px')
+        .style('top', (margin.top + 10) + 'px')
+        .style('right', '20px')
+        .style('max-height', (innerHeight - 20) + 'px')
         .style('overflow-y', 'auto')
         .style('background', 'white')
         .style('border-radius', '4px')
-        .style('padding', '8px 0');
+        .style('padding', '8px 0')
+        .style('width', '180px');
 
       // Get unique countries
       const countries = new Map();
@@ -504,81 +525,126 @@
           countries.set(city.iso3, {
             iso3: city.iso3,
             name: city.country,
-            color: getCountryColor(city.iso3),
-            highlighted: isHighlightedCountry(city.iso3),
           });
         }
       });
 
       // Sort: highlighted first, then alphabetical
       const sortedCountries = Array.from(countries.values()).sort((a, b) => {
-        if (a.highlighted && !b.highlighted) return -1;
-        if (!a.highlighted && b.highlighted) return 1;
+        const aH = isHighlighted(a.iso3) ? 0 : 1;
+        const bH = isHighlighted(b.iso3) ? 0 : 1;
+        if (aH !== bH) return aH - bH;
         return a.name.localeCompare(b.name);
       });
 
+      function updateLegend() {
+        legendContainer.selectAll('.legend-item').each(function() {
+          const item = d3.select(this);
+          const iso3 = item.attr('data-iso3');
+          const highlighted = isHighlighted(iso3);
+          const color = getCountryColor(iso3);
+
+          item.select('.legend-marker')
+            .style('background-color', color)
+            .style('opacity', highlighted ? 1 : 0.4);
+
+          item.select('.legend-label')
+            .style('font-weight', highlighted ? '600' : '400')
+            .style('color', highlighted ? UI_COLORS.text : UI_COLORS.textLight);
+        });
+      }
+
       sortedCountries.forEach(country => {
+        const highlighted = isHighlighted(country.iso3);
+        const color = getCountryColor(country.iso3);
+
         const item = legendContainer.append('div')
           .attr('class', 'legend-item')
           .attr('data-iso3', country.iso3)
           .style('display', 'flex')
           .style('align-items', 'center')
-          .style('padding', '4px 12px')
+          .style('padding', '5px 12px')
           .style('cursor', 'pointer')
           .style('border-radius', '4px')
           .style('transition', 'background-color 0.15s ease');
 
         item.append('div')
+          .attr('class', 'legend-marker')
           .style('width', '12px')
           .style('height', '12px')
           .style('border-radius', '2px')
           .style('margin-right', '8px')
-          .style('background-color', country.color)
-          .style('flex-shrink', 0);
+          .style('background-color', color)
+          .style('opacity', highlighted ? 1 : 0.4)
+          .style('flex-shrink', 0)
+          .style('transition', 'all 0.15s ease');
 
         item.append('span')
-          .style('font-size', '13px')
-          .style('color', UI_COLORS.text)
+          .attr('class', 'legend-label')
+          .style('font-size', '12px')
+          .style('color', highlighted ? UI_COLORS.text : UI_COLORS.textLight)
+          .style('font-weight', highlighted ? '600' : '400')
           .style('white-space', 'nowrap')
+          .style('overflow', 'hidden')
+          .style('text-overflow', 'ellipsis')
+          .style('transition', 'all 0.15s ease')
           .text(country.name);
 
-        // Click to toggle
+        // Click to toggle highlight
         item.on('click', function() {
-          visibilityState[country.iso3] = !visibilityState[country.iso3];
-          const visible = visibilityState[country.iso3];
+          const iso3 = country.iso3;
 
-          d3.select(this).style('opacity', visible ? 1 : 0.4);
+          if (activeHighlights.has(iso3)) {
+            activeHighlights.delete(iso3);
+          } else {
+            activeHighlights.add(iso3);
+            // Assign color if not already assigned
+            if (!colorAssignments.has(iso3)) {
+              if (DEFAULT_COUNTRY_COLORS[iso3]) {
+                colorAssignments.set(iso3, DEFAULT_COUNTRY_COLORS[iso3]);
+              } else {
+                colorAssignments.set(iso3, HIGHLIGHT_COLORS[nextColorIndex % HIGHLIGHT_COLORS.length]);
+                nextColorIndex++;
+              }
+            }
+          }
 
+          updateAllTrajectories();
+          updateLegend();
+
+          // Re-sort trajectories: bring highlighted to front
           chartArea.selectAll('.city-group')
-            .filter(d => d.iso3 === country.iso3)
-            .style('opacity', visible ? 1 : 0)
-            .style('pointer-events', visible ? 'all' : 'none');
+            .sort((a, b) => {
+              const aH = isHighlighted(a.iso3) ? 1 : 0;
+              const bH = isHighlighted(b.iso3) ? 1 : 0;
+              return aH - bH;
+            });
         });
 
-        // Hover to highlight
+        // Hover to preview highlight
         item.on('mouseenter', function() {
-          d3.select(this).style('background-color', UI_COLORS.hover);
+          d3.select(this).style('background-color', 'rgba(0,0,0,0.05)');
 
+          // Temporarily highlight this country's cities
           chartArea.selectAll('.city-group').each(function() {
             const g = d3.select(this);
             const isThisCountry = g.datum().iso3 === country.iso3;
-            g.select('.trajectory-line')
-              .style('stroke-width', isThisCountry ? 4 : 1)
-              .style('stroke-opacity', isThisCountry ? 1 : 0.1);
+
+            if (isThisCountry) {
+              g.select('.trajectory-line')
+                .style('stroke-width', 3)
+                .style('stroke-opacity', 0.9);
+              g.raise();
+            } else {
+              g.select('.trajectory-line')
+                .style('stroke-opacity', 0.08);
+            }
           });
         });
 
         item.on('mouseleave', function() {
           d3.select(this).style('background-color', 'transparent');
-
-          chartArea.selectAll('.city-group').each(function() {
-            const g = d3.select(this);
-            const city = g.datum();
-            const highlighted = isHighlightedCountry(city.iso3);
-            g.select('.trajectory-line')
-              .style('stroke-width', highlighted ? 3 : 1.5)
-              .style('stroke-opacity', highlighted ? 1 : 0.35);
-          });
+          updateAllTrajectories();
         });
       });
 
@@ -598,32 +664,74 @@
       const searchInput = searchContainer.append('input')
         .attr('type', 'text')
         .attr('placeholder', 'Search cities or countries...')
-        .style('width', '200px')
+        .style('width', '220px')
         .style('border', '1px solid #ccc')
         .style('border-radius', '4px')
         .style('padding', '8px 12px')
         .style('font-size', '13px')
+        .style('font-family', 'inherit')
         .style('outline', 'none');
 
-      const debouncedSearch = debounce((term) => {
-        if (!term) {
-          chartArea.selectAll('.city-group').style('opacity', 1);
+      const clearBtn = searchContainer.append('button')
+        .style('display', 'none')
+        .style('border', 'none')
+        .style('background', 'transparent')
+        .style('cursor', 'pointer')
+        .style('font-size', '18px')
+        .style('color', '#999')
+        .style('margin-left', '8px')
+        .style('padding', '0 4px')
+        .text('×')
+        .on('click', function() {
+          searchInput.property('value', '');
+          clearBtn.style('display', 'none');
+          updateAllTrajectories();
+        });
+
+      function performSearch(term) {
+        console.log('Searching for:', term); // Debug
+
+        if (!term || term.trim() === '') {
+          updateAllTrajectories();
+          clearBtn.style('display', 'none');
           return;
         }
 
-        const lowerTerm = term.toLowerCase();
+        clearBtn.style('display', 'inline');
+        const lowerTerm = term.toLowerCase().trim();
+
         chartArea.selectAll('.city-group').each(function() {
           const g = d3.select(this);
           const city = g.datum();
-          const match = city.name.toLowerCase().includes(lowerTerm) ||
-                        city.country.toLowerCase().includes(lowerTerm) ||
-                        city.iso3.toLowerCase().includes(lowerTerm);
-          g.style('opacity', match ? 1 : 0.1);
-        });
-      }, 150);
 
+          const nameMatch = city.name && city.name.toLowerCase().includes(lowerTerm);
+          const countryMatch = city.country && city.country.toLowerCase().includes(lowerTerm);
+          const iso3Match = city.iso3 && city.iso3.toLowerCase().includes(lowerTerm);
+
+          const match = nameMatch || countryMatch || iso3Match;
+
+          g.select('.trajectory-line')
+            .style('stroke-opacity', match ? 0.9 : 0.03)
+            .style('stroke-width', match ? 3 : 1);
+
+          g.select('.marker-start')
+            .style('opacity', match ? 1 : 0.05);
+
+          g.select('.marker-end')
+            .style('opacity', match ? 1 : 0.05);
+
+          g.selectAll('.year-label')
+            .style('opacity', match && isHighlighted(city.iso3) ? 1 : 0);
+
+          if (match) {
+            g.raise();
+          }
+        });
+      }
+
+      // Direct input handler (no debounce for responsiveness)
       searchInput.on('input', function() {
-        debouncedSearch(this.value);
+        performSearch(this.value);
       });
 
       searchInput.on('focus', function() {
@@ -633,10 +741,17 @@
       searchInput.on('blur', function() {
         d3.select(this).style('border-color', '#ccc');
       });
+
+      // Initial state
+      updateAllTrajectories();
     }
 
     // Initialize
-    createChart();
+    createChart().catch(err => {
+      console.error('Error creating chart:', err);
+      document.getElementById('chart-container').innerHTML =
+        '<div style="color: red; padding: 20px;">Error loading chart. Check console for details.</div>';
+    });
   </script>
 </body>
 </html>
