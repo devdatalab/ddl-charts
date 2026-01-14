@@ -136,18 +136,18 @@ export function createTrajectoryChart(parent, data, options = {}) {
 
       g.select('.trajectory-line')
         .style('stroke', color)
-        .style('stroke-width', highlighted ? 2.5 : 1)
-        .style('stroke-opacity', highlighted ? 0.9 : 0.25);
+        .style('stroke-width', highlighted ? 2.5 : 1.5)
+        .style('stroke-opacity', highlighted ? 1 : 0.5);
 
       g.select('.marker-start')
         .style('fill', color)
-        .attr('r', highlighted ? 4 : 2)
-        .style('opacity', highlighted ? 1 : 0.35);
+        .attr('r', highlighted ? 4 : 3)
+        .style('opacity', highlighted ? 1 : 0.6);
 
       g.select('.marker-end')
         .style('stroke', color)
         .style('fill', highlighted ? 'white' : color)
-        .style('opacity', highlighted ? 1 : 0.35);
+        .style('opacity', highlighted ? 1 : 0.6);
 
       g.selectAll('.year-label')
         .style('opacity', highlighted ? 1 : 0)
@@ -193,7 +193,7 @@ export function createTrajectoryChart(parent, data, options = {}) {
           // (do nothing - they maintain their current appearance)
         } else {
           // Dim non-active, non-hovered cities
-          g.select('.trajectory-line').style('stroke-opacity', 0.05);
+          g.select('.trajectory-line').style('stroke-opacity', 0.15);
         }
       });
 
@@ -445,13 +445,13 @@ export function createTrajectoryChart(parent, data, options = {}) {
               const cityIsActive = isCityHighlighted(city);
 
               if (isHoveredCountry) {
-                g.select('.trajectory-line').style('stroke-width', 3).style('stroke-opacity', 0.9);
+                g.select('.trajectory-line').style('stroke-width', 3).style('stroke-opacity', 1);
                 g.raise();
               } else if (cityIsActive) {
                 // Active cities are NOT affected by legend hover - keep full visibility
                 // (do nothing - they maintain their current appearance)
               } else {
-                g.select('.trajectory-line').style('stroke-opacity', 0.05);
+                g.select('.trajectory-line').style('stroke-opacity', 0.15);
               }
             });
           });
@@ -530,13 +530,13 @@ export function createTrajectoryChart(parent, data, options = {}) {
               const cityIsActive = isCityHighlighted(city);
 
               if (isHoveredRegion) {
-                g.select('.trajectory-line').style('stroke-width', 3).style('stroke-opacity', 0.9);
+                g.select('.trajectory-line').style('stroke-width', 3).style('stroke-opacity', 1);
                 g.raise();
               } else if (cityIsActive) {
                 // Active cities are NOT affected by legend hover - keep full visibility
                 // (do nothing - they maintain their current appearance)
               } else {
-                g.select('.trajectory-line').style('stroke-opacity', 0.05);
+                g.select('.trajectory-line').style('stroke-opacity', 0.15);
               }
             });
           });
@@ -577,7 +577,7 @@ export function createTrajectoryChart(parent, data, options = {}) {
           const match = nameMatch || countryMatch || iso3Match;
 
           g.select('.trajectory-line')
-            .style('stroke-opacity', match ? 0.9 : 0.03)
+            .style('stroke-opacity', match ? 0.9 : 0.15)
             .style('stroke-width', match ? 3 : 1);
 
           g.select('.marker-start').style('opacity', match ? 1 : 0.05);
@@ -659,8 +659,8 @@ function renderTrajectory(chartArea, city, xScale, yScale, lineGenerator, colorM
     .attr('d', lineGenerator(smoothedTrajectory))
     .style('fill', 'none')
     .style('stroke', color)
-    .style('stroke-width', highlighted ? 2.5 : 1)
-    .style('stroke-opacity', highlighted ? 0.9 : 0.25)
+    .style('stroke-width', highlighted ? 2.5 : 1.5)
+    .style('stroke-opacity', highlighted ? 1 : 0.5)
     .style('pointer-events', 'none')
     .style('transition', 'stroke-width 0.15s ease, stroke-opacity 0.15s ease, stroke 0.15s ease');
 
@@ -671,14 +671,14 @@ function renderTrajectory(chartArea, city, xScale, yScale, lineGenerator, colorM
     .attr('class', 'marker-start')
     .attr('cx', xScale(startPoint.gdp))
     .attr('cy', yScale(startPoint.pm25))
-    .attr('r', highlighted ? 4 : 2)
+    .attr('r', highlighted ? 4 : 3)
     .style('fill', color)
-    .style('opacity', highlighted ? 1 : 0.35)
+    .style('opacity', highlighted ? 1 : 0.6)
     .style('transition', 'all 0.15s ease');
 
   // Draw end marker (hollow triangle)
   const endPoint = city.trajectory[city.trajectory.length - 1];
-  const size = highlighted ? 5 : 3;
+  const size = highlighted ? 5 : 4;
   const triangle = d3.symbol().type(d3.symbolTriangle).size(size * size * 2);
 
   cityGroup
@@ -689,7 +689,7 @@ function renderTrajectory(chartArea, city, xScale, yScale, lineGenerator, colorM
     .style('fill', highlighted ? 'white' : color)
     .style('stroke', color)
     .style('stroke-width', highlighted ? 1.5 : 1)
-    .style('opacity', highlighted ? 1 : 0.35)
+    .style('opacity', highlighted ? 1 : 0.6)
     .style('transition', 'all 0.15s ease');
 
   // Add year labels (always render, opacity controlled by highlight state)
