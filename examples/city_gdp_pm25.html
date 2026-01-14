@@ -618,12 +618,12 @@
 
       sortedCities.forEach(city => renderCity(city));
 
-      // Info box - positioned at top-left of plot area
+      // Info box - positioned at bottom-left of plot area
       const infoBox = container.append('div')
         .attr('class', 'info-box')
         .style('position', 'absolute')
         .style('left', (margin.left + 15) + 'px')
-        .style('top', (margin.top + 60) + 'px')
+        .style('bottom', (margin.bottom + 15) + 'px')
         .style('background', 'rgba(255, 255, 255, 0.95)')
         .style('border', '1px solid #ddd')
         .style('border-radius', '4px')
