@@ -1175,6 +1175,20 @@
         .style('display', 'none');
 
       let selectedCity = null;
+      let currentMatches = [];  // Store current dropdown matches for keyboard nav
+      let highlightedIndex = -1;  // Currently highlighted dropdown item (-1 = none)
+
+      function updateDropdownHighlight() {
+        dropdown.selectAll('.dropdown-item').each(function(d, i) {
+          const isHighlighted = i === highlightedIndex;
+          d3.select(this).style('background', isHighlighted ? '#e3f2fd' : 'white');
+          if (isHighlighted) {
+            // Also highlight this city on the chart
+            highlightSingleCity(currentMatches[i]);
+            showTooltip(currentMatches[i]);
+          }
+        });
+      }
 
       function highlightText(text, term) {
         if (!term) return text;
@@ -1247,16 +1261,18 @@
 
       function updateDropdown(term) {
         dropdown.selectAll('*').remove();
+        highlightedIndex = -1;  // Reset keyboard navigation
 
         if (!term || term.trim().length < 1) {
           dropdown.style('display', 'none');
+          currentMatches = [];
           return [];
         }
 
         const lowerTerm = term.toLowerCase().trim();
 
         // Find matching cities (search by city name, country name, or ISO3 code)
-        const matches = data.cities.filter(city => {
+        currentMatches = data.cities.filter(city => {
           const nameMatch = city.name && city.name.toLowerCase().includes(lowerTerm);
           const fullCountryName = ISO3_TO_NAME[city.iso3] || city.country || '';
           const countryMatch = fullCountryName.toLowerCase().includes(lowerTerm);
@@ -1264,7 +1280,7 @@
           return nameMatch || countryMatch || iso3Match;
         }).slice(0, 10); // Limit to 10 results
 
-        if (matches.length === 0) {
+        if (currentMatches.length === 0) {
           dropdown.append('div')
             .style('padding', '10px 12px')
             .style('color', '#999')
@@ -1274,28 +1290,30 @@
           return [];
         }
 
-        matches.forEach(city => {
+        currentMatches.forEach((city, index) => {
           const item = dropdown.append('div')
             .attr('class', 'dropdown-item')
+            .attr('data-index', index)
             .style('padding', '8px 12px')
             .style('cursor', 'pointer')
             .style('font-size', '13px')
             .style('border-bottom', '1px solid #f0f0f0')
             .style('transition', 'background 0.1s ease')
             .on('mouseenter', function() {
-              d3.select(this).style('background', '#f5f5f5');
-              // Highlight this city's trajectory
-              highlightSingleCity(city);
-              showTooltip(city);
+              highlightedIndex = index;
+              updateDropdownHighlight();
             })
             .on('mouseleave', function() {
+              highlightedIndex = -1;
               d3.select(this).style('background', 'white');
               // Restore search preview (all matching cities)
               const term = searchInput.property('value');
-              if (term) {
+              if (term && !selectedCity) {
                 performSearch(term);
               }
-              hideTooltip();
+              if (!selectedCity) {
+                hideTooltip();
+              }
             })
             .on('mousedown', function(event) {
               event.preventDefault(); // Prevent blur before click registers
@@ -1316,7 +1334,7 @@
         });
 
         dropdown.style('display', 'block');
-        return matches;
+        return currentMatches;
       }
 
       function performSearch(term) {
@@ -1393,9 +1411,23 @@
 
       // Keyboard navigation
       searchInput.on('keydown', function(event) {
+        const dropdownVisible = dropdown.style('display') !== 'none';
+
         if (event.key === 'Escape') {
           dropdown.style('display', 'none');
+          highlightedIndex = -1;
           searchInput.node().blur();
+        } else if (event.key === 'ArrowDown' && dropdownVisible && currentMatches.length > 0) {
+          event.preventDefault();
+          highlightedIndex = Math.min(highlightedIndex + 1, currentMatches.length - 1);
+          updateDropdownHighlight();
+        } else if (event.key === 'ArrowUp' && dropdownVisible && currentMatches.length > 0) {
+          event.preventDefault();
+          highlightedIndex = Math.max(highlightedIndex - 1, 0);
+          updateDropdownHighlight();
+        } else if (event.key === 'Enter' && dropdownVisible && highlightedIndex >= 0) {
+          event.preventDefault();
+          selectCity(currentMatches[highlightedIndex]);
         }
       });
 
