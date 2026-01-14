@@ -51,7 +51,6 @@
       position: relative;
     }
 
-    /* Loading state */
     .loading {
       display: flex;
       align-items: center;
@@ -60,7 +59,6 @@
       color: #666;
     }
 
-    /* Footer */
     .footer {
       max-width: 1200px;
       margin: 20px auto 0;
@@ -95,7 +93,6 @@
     Visualization: DDL Charts (D3.js)
   </div>
 
-  <!-- D3.js from CDN -->
   <script src="https://d3js.org/d3.v7.min.js"></script>
 
   <script type="module">
@@ -120,19 +117,18 @@
     const UI_COLORS = {
       text: '#5b5b5b',
       textLight: '#999999',
-      muted: 'rgba(150, 150, 150, 0.25)',
-      mutedMarker: 'rgba(150, 150, 150, 0.5)',
+      muted: 'rgba(150, 150, 150, 0.2)',
+      mutedMarker: 'rgba(150, 150, 150, 0.4)',
     };
 
     // Track which countries are actively highlighted
-    let activeHighlights = new Set(['CHN', 'IND', 'USA']); // Default highlighted
-    let colorAssignments = new Map(); // iso3 -> color
-    let nextColorIndex = 3; // Start after default colors
+    let activeHighlights = new Set(['CHN', 'IND', 'USA']);
+    let colorAssignments = new Map();
+    let nextColorIndex = 3;
 
     function getCountryColor(iso3) {
       if (activeHighlights.has(iso3)) {
         if (!colorAssignments.has(iso3)) {
-          // Assign a color
           if (DEFAULT_COUNTRY_COLORS[iso3]) {
             colorAssignments.set(iso3, DEFAULT_COUNTRY_COLORS[iso3]);
           } else {
@@ -169,14 +165,6 @@
       return result;
     }
 
-    function debounce(func, wait) {
-      let timeout;
-      return function(...args) {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), wait);
-      };
-    }
-
     // === LOAD DATA ===
     async function loadData() {
       const response = await fetch('./data/city_trajectories.json');
@@ -190,11 +178,11 @@
 
       const data = await loadData();
 
-      // Dimensions
+      // Dimensions - increased left margin for Y-axis label
       const containerWidth = container.node().getBoundingClientRect().width;
       const width = Math.min(containerWidth - 40, 1100);
       const height = 650;
-      const margin = { top: 30, right: 220, bottom: 70, left: 80 };
+      const margin = { top: 30, right: 220, bottom: 70, left: 90 };
       const innerWidth = width - margin.left - margin.right;
       const innerHeight = height - margin.top - margin.bottom;
 
@@ -219,60 +207,44 @@
         .domain([data.bounds.pm25.min * 0.9, data.bounds.pm25.max * 1.1])
         .range([innerHeight, 0]);
 
-      // Custom tick values for cleaner X-axis (powers of 10 and midpoints)
+      // Clean tick values
       const xTickValues = [1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000];
       const yTickValues = [5, 10, 20, 50, 100, 200];
 
-      // Grid lines
-      chartArea.append('g')
-        .attr('class', 'grid x-grid')
-        .attr('transform', `translate(0,${innerHeight})`)
-        .call(d3.axisBottom(xScale)
-          .tickValues(xTickValues)
-          .tickSize(-innerHeight)
-          .tickFormat('')
-        )
-        .call(g => g.select('.domain').remove())
-        .selectAll('line')
-        .style('stroke', '#f0f0f0');
+      // NO GRID LINES - removed per user request
 
-      chartArea.append('g')
-        .attr('class', 'grid y-grid')
-        .call(d3.axisLeft(yScale)
-          .tickValues(yTickValues)
-          .tickSize(-innerWidth)
-          .tickFormat('')
-        )
-        .call(g => g.select('.domain').remove())
-        .selectAll('line')
-        .style('stroke', '#f0f0f0');
-
-      // Axes with limited ticks
+      // Axes - clean styling without extra domain lines
       chartArea.append('g')
         .attr('class', 'x-axis')
         .attr('transform', `translate(0,${innerHeight})`)
         .call(d3.axisBottom(xScale)
           .tickValues(xTickValues)
           .tickFormat(d => d >= 1000 ? `$${d/1000}K` : `$${d}`)
+          .tickSize(5)
         )
-        .call(g => g.select('.domain').style('stroke', '#ccc'))
+        .call(g => g.select('.domain').attr('stroke', '#ccc'))
+        .call(g => g.selectAll('.tick line').attr('stroke', '#ccc'))
         .selectAll('text')
-        .style('font-size', '11px');
+        .style('font-size', '11px')
+        .style('fill', UI_COLORS.text);
 
       chartArea.append('g')
         .attr('class', 'y-axis')
         .call(d3.axisLeft(yScale)
           .tickValues(yTickValues)
           .tickFormat(d => d)
+          .tickSize(5)
         )
-        .call(g => g.select('.domain').style('stroke', '#ccc'))
+        .call(g => g.select('.domain').attr('stroke', '#ccc'))
+        .call(g => g.selectAll('.tick line').attr('stroke', '#ccc'))
         .selectAll('text')
-        .style('font-size', '11px');
+        .style('font-size', '11px')
+        .style('fill', UI_COLORS.text);
 
-      // Axis labels
+      // Axis labels - positioned to avoid collision
       svg.append('text')
         .attr('x', margin.left + innerWidth / 2)
-        .attr('y', height - 15)
+        .attr('y', height - 12)
         .attr('text-anchor', 'middle')
         .style('font-size', '13px')
         .style('fill', UI_COLORS.text)
@@ -281,7 +253,7 @@
       svg.append('text')
         .attr('transform', 'rotate(-90)')
         .attr('x', -(margin.top + innerHeight / 2))
-        .attr('y', 20)
+        .attr('y', 15)
         .attr('text-anchor', 'middle')
         .style('font-size', '13px')
         .style('fill', UI_COLORS.text)
@@ -293,7 +265,7 @@
         .y(d => yScale(d.pm25))
         .curve(d3.curveCardinal.tension(0.5));
 
-      // Function to update all trajectories based on highlight state
+      // Function to update trajectories - respects active state
       function updateAllTrajectories() {
         chartArea.selectAll('.city-group').each(function() {
           const g = d3.select(this);
@@ -304,17 +276,17 @@
           g.select('.trajectory-line')
             .style('stroke', color)
             .style('stroke-width', highlighted ? 2.5 : 1)
-            .style('stroke-opacity', highlighted ? 0.9 : 0.3);
+            .style('stroke-opacity', highlighted ? 0.9 : 0.25);
 
           g.select('.marker-start')
             .style('fill', color)
-            .attr('r', highlighted ? 4 : 2.5)
-            .style('opacity', highlighted ? 1 : 0.4);
+            .attr('r', highlighted ? 4 : 2)
+            .style('opacity', highlighted ? 1 : 0.35);
 
           g.select('.marker-end')
             .style('stroke', color)
             .style('fill', highlighted ? 'white' : color)
-            .style('opacity', highlighted ? 1 : 0.4);
+            .style('opacity', highlighted ? 1 : 0.35);
 
           g.selectAll('.year-label')
             .style('opacity', highlighted ? 1 : 0)
@@ -327,7 +299,6 @@
         const highlighted = isHighlighted(city.iso3);
         const color = getCountryColor(city.iso3);
 
-        // Smooth trajectory
         const gdpValues = city.trajectory.map(p => p.gdp);
         const pm25Values = city.trajectory.map(p => p.pm25);
         const smoothedGdp = smoothValues(gdpValues);
@@ -344,28 +315,25 @@
           .attr('data-iso3', city.iso3)
           .datum(city);
 
-        // Trajectory line
         cityGroup.append('path')
           .attr('class', 'trajectory-line')
           .attr('d', line(smoothedTrajectory))
           .style('fill', 'none')
           .style('stroke', color)
           .style('stroke-width', highlighted ? 2.5 : 1)
-          .style('stroke-opacity', highlighted ? 0.9 : 0.3)
+          .style('stroke-opacity', highlighted ? 0.9 : 0.25)
           .style('transition', 'stroke-width 0.15s ease, stroke-opacity 0.15s ease, stroke 0.15s ease');
 
-        // Start marker
         const start = city.trajectory[0];
         cityGroup.append('circle')
           .attr('class', 'marker-start')
           .attr('cx', xScale(start.gdp))
           .attr('cy', yScale(start.pm25))
-          .attr('r', highlighted ? 4 : 2.5)
+          .attr('r', highlighted ? 4 : 2)
           .style('fill', color)
-          .style('opacity', highlighted ? 1 : 0.4)
+          .style('opacity', highlighted ? 1 : 0.35)
           .style('transition', 'all 0.15s ease');
 
-        // End marker (triangle)
         const end = city.trajectory[city.trajectory.length - 1];
         const size = highlighted ? 5 : 3;
         const triangle = d3.symbol().type(d3.symbolTriangle).size(size * size * 2);
@@ -377,10 +345,9 @@
           .style('fill', highlighted ? 'white' : color)
           .style('stroke', color)
           .style('stroke-width', highlighted ? 1.5 : 1)
-          .style('opacity', highlighted ? 1 : 0.4)
+          .style('opacity', highlighted ? 1 : 0.35)
           .style('transition', 'all 0.15s ease');
 
-        // Year labels (always add, control visibility via opacity)
         cityGroup.append('text')
           .attr('class', 'year-label year-start')
           .attr('x', xScale(start.gdp))
@@ -390,7 +357,7 @@
           .style('fill', color)
           .style('font-weight', '600')
           .style('opacity', highlighted ? 1 : 0)
-          .style('transition', 'opacity 0.15s ease')
+          .style('pointer-events', 'none')
           .text(city.yearStart);
 
         cityGroup.append('text')
@@ -402,13 +369,13 @@
           .style('fill', color)
           .style('font-weight', '600')
           .style('opacity', highlighted ? 1 : 0)
-          .style('transition', 'opacity 0.15s ease')
+          .style('pointer-events', 'none')
           .text(city.yearEnd);
 
         return cityGroup;
       }
 
-      // Sort cities: non-highlighted first (background), then highlighted (foreground)
+      // Sort and render
       const sortedCities = [...data.cities].sort((a, b) => {
         const aH = isHighlighted(a.iso3) ? 1 : 0;
         const bH = isHighlighted(b.iso3) ? 1 : 0;
@@ -434,7 +401,6 @@
       function showTooltip(city, event) {
         const gdpChange = ((city.gdpEnd - city.gdpStart) / city.gdpStart * 100).toFixed(0);
         const pm25Change = ((city.pm25End - city.pm25Start) / city.pm25Start * 100).toFixed(0);
-
         const gdpArrow = gdpChange >= 0 ? '↑' : '↓';
         const pm25Arrow = pm25Change >= 0 ? '↑' : '↓';
         const gdpColor = gdpChange >= 0 ? '#43A047' : '#E53935';
@@ -452,11 +418,8 @@
 
         const containerRect = container.node().getBoundingClientRect();
         const [x, y] = d3.pointer(event, container.node());
-
         let left = x + 15;
         let top = y - 10;
-
-        // Keep tooltip in bounds
         const tooltipWidth = 220;
         if (left + tooltipWidth > containerRect.width - 20) {
           left = x - tooltipWidth - 15;
@@ -472,36 +435,45 @@
         tooltip.style('opacity', 0);
       }
 
-      // Hover interactions
+      // HOVER INTERACTIONS - RESPECTS ACTIVE STATE
+      // Key change: Active/highlighted countries are NEVER dimmed
       chartArea.selectAll('.city-group')
         .style('cursor', 'pointer')
         .on('mouseenter', function(event) {
-          const city = d3.select(this).datum();
+          const hoveredCity = d3.select(this).datum();
+          const hoveredIso3 = hoveredCity.iso3;
 
-          // Highlight this city, dim others
           chartArea.selectAll('.city-group').each(function() {
             const g = d3.select(this);
-            const isThis = g.datum().id === city.id;
+            const city = g.datum();
+            const isHoveredCity = city.id === hoveredCity.id;
+            const cityIsActive = isHighlighted(city.iso3);
 
-            if (isThis) {
+            if (isHoveredCity) {
+              // Always highlight the hovered city
               g.select('.trajectory-line')
                 .style('stroke-width', 4)
                 .style('stroke-opacity', 1);
               g.raise();
-            } else {
+            } else if (cityIsActive) {
+              // NEVER dim active/highlighted countries - keep them visible
+              // Just slightly reduce opacity to make hovered city stand out more
               g.select('.trajectory-line')
-                .style('stroke-opacity', 0.08);
+                .style('stroke-opacity', 0.5);
+            } else {
+              // Dim non-active, non-hovered cities
+              g.select('.trajectory-line')
+                .style('stroke-opacity', 0.05);
             }
           });
 
-          showTooltip(city, event);
+          showTooltip(hoveredCity, event);
         })
         .on('mousemove', function(event) {
           const city = d3.select(this).datum();
           showTooltip(city, event);
         })
         .on('mouseleave', function() {
-          // Reset to current highlight state
           updateAllTrajectories();
           hideTooltip();
         });
@@ -518,7 +490,6 @@
         .style('padding', '8px 0')
         .style('width', '180px');
 
-      // Get unique countries
       const countries = new Map();
       data.cities.forEach(city => {
         if (!countries.has(city.iso3)) {
@@ -529,7 +500,6 @@
         }
       });
 
-      // Sort: highlighted first, then alphabetical
       const sortedCountries = Array.from(countries.values()).sort((a, b) => {
         const aH = isHighlighted(a.iso3) ? 0 : 1;
         const bH = isHighlighted(b.iso3) ? 0 : 1;
@@ -598,7 +568,6 @@
             activeHighlights.delete(iso3);
           } else {
             activeHighlights.add(iso3);
-            // Assign color if not already assigned
             if (!colorAssignments.has(iso3)) {
               if (DEFAULT_COUNTRY_COLORS[iso3]) {
                 colorAssignments.set(iso3, DEFAULT_COUNTRY_COLORS[iso3]);
@@ -612,7 +581,7 @@
           updateAllTrajectories();
           updateLegend();
 
-          // Re-sort trajectories: bring highlighted to front
+          // Re-sort: bring highlighted to front
           chartArea.selectAll('.city-group')
             .sort((a, b) => {
               const aH = isHighlighted(a.iso3) ? 1 : 0;
@@ -621,23 +590,32 @@
             });
         });
 
-        // Hover to preview highlight
+        // LEGEND HOVER - RESPECTS ACTIVE STATE
         item.on('mouseenter', function() {
           d3.select(this).style('background-color', 'rgba(0,0,0,0.05)');
 
-          // Temporarily highlight this country's cities
+          const hoveredIso3 = country.iso3;
+
           chartArea.selectAll('.city-group').each(function() {
             const g = d3.select(this);
-            const isThisCountry = g.datum().iso3 === country.iso3;
+            const city = g.datum();
+            const isHoveredCountry = city.iso3 === hoveredIso3;
+            const cityIsActive = isHighlighted(city.iso3);
 
-            if (isThisCountry) {
+            if (isHoveredCountry) {
+              // Highlight hovered country's cities
               g.select('.trajectory-line')
                 .style('stroke-width', 3)
                 .style('stroke-opacity', 0.9);
               g.raise();
-            } else {
+            } else if (cityIsActive) {
+              // Keep active countries visible (don't dim them)
               g.select('.trajectory-line')
-                .style('stroke-opacity', 0.08);
+                .style('stroke-opacity', 0.5);
+            } else {
+              // Dim non-active, non-hovered cities
+              g.select('.trajectory-line')
+                .style('stroke-opacity', 0.05);
             }
           });
         });
@@ -689,8 +667,6 @@
         });
 
       function performSearch(term) {
-        console.log('Searching for:', term); // Debug
-
         if (!term || term.trim() === '') {
           updateAllTrajectories();
           clearBtn.style('display', 'none');
@@ -707,7 +683,6 @@
           const nameMatch = city.name && city.name.toLowerCase().includes(lowerTerm);
           const countryMatch = city.country && city.country.toLowerCase().includes(lowerTerm);
           const iso3Match = city.iso3 && city.iso3.toLowerCase().includes(lowerTerm);
-
           const match = nameMatch || countryMatch || iso3Match;
 
           g.select('.trajectory-line')
@@ -729,7 +704,6 @@
         });
       }
 
-      // Direct input handler (no debounce for responsiveness)
       searchInput.on('input', function() {
         performSearch(this.value);
       });
@@ -742,11 +716,9 @@
         d3.select(this).style('border-color', '#ccc');
       });
 
-      // Initial state
       updateAllTrajectories();
     }
 
-    // Initialize
     createChart().catch(err => {
       console.error('Error creating chart:', err);
       document.getElementById('chart-container').innerHTML =

@@ -4,11 +4,13 @@ import * as d3 from 'd3';
  * OWID-inspired default axis styling.
  */
 export const AXIS_DEFAULTS = {
-  tickSize: 6,
+  tickSize: 5,
   tickPadding: 8,
   fontFamily: 'Lato, "Helvetica Neue", Helvetica, Arial, sans-serif',
-  fontSize: 12,
+  fontSize: 11,
+  labelFontSize: 13,
   color: '#5b5b5b',
+  lineColor: '#ccc',
   gridColor: '#e0e0e0',
 };
 
@@ -65,7 +67,8 @@ export function createXAxis(svg, scale, options = {}) {
     .style('font-size', `${AXIS_DEFAULTS.fontSize}px`)
     .style('fill', AXIS_DEFAULTS.color);
 
-  axisGroup.selectAll('line, path').style('stroke', AXIS_DEFAULTS.color);
+  axisGroup.select('.domain').style('stroke', AXIS_DEFAULTS.lineColor);
+  axisGroup.selectAll('.tick line').style('stroke', AXIS_DEFAULTS.lineColor);
 
   // Add grid lines if requested
   if (grid && gridHeight > 0) {
@@ -82,16 +85,16 @@ export function createXAxis(svg, scale, options = {}) {
   // Add label if provided
   if (label) {
     const range = scale.range();
-    const labelX = (range[0] + range[1]) / 2;
+    const labelXPos = (range[0] + range[1]) / 2;
 
     svg
       .append('text')
       .attr('class', 'x-axis-label')
-      .attr('x', labelX)
-      .attr('y', y + 45)
+      .attr('x', labelXPos)
+      .attr('y', y + 50)
       .attr('text-anchor', 'middle')
       .style('font-family', AXIS_DEFAULTS.fontFamily)
-      .style('font-size', `${AXIS_DEFAULTS.fontSize}px`)
+      .style('font-size', `${AXIS_DEFAULTS.labelFontSize}px`)
       .style('fill', AXIS_DEFAULTS.color)
       .text(label);
   }
@@ -107,6 +110,7 @@ export function createXAxis(svg, scale, options = {}) {
  * @param {Object} options - Axis configuration
  * @param {number} options.x - X position for the axis
  * @param {string} [options.label] - Axis label text
+ * @param {number} [options.labelX=-60] - X offset for the axis label (negative = left)
  * @param {Function} [options.tickFormat] - Custom tick format function
  * @param {number} [options.tickCount] - Approximate number of ticks
  * @param {number[]} [options.tickValues] - Explicit tick values
@@ -118,6 +122,7 @@ export function createYAxis(svg, scale, options = {}) {
   const {
     x = 0,
     label,
+    labelX = -60,
     tickFormat,
     tickCount,
     tickValues,
@@ -148,7 +153,8 @@ export function createYAxis(svg, scale, options = {}) {
     .style('font-size', `${AXIS_DEFAULTS.fontSize}px`)
     .style('fill', AXIS_DEFAULTS.color);
 
-  axisGroup.selectAll('line, path').style('stroke', AXIS_DEFAULTS.color);
+  axisGroup.select('.domain').style('stroke', AXIS_DEFAULTS.lineColor);
+  axisGroup.selectAll('.tick line').style('stroke', AXIS_DEFAULTS.lineColor);
 
   // Add grid lines if requested
   if (grid && gridWidth > 0) {
@@ -171,11 +177,11 @@ export function createYAxis(svg, scale, options = {}) {
       .append('text')
       .attr('class', 'y-axis-label')
       .attr('x', -labelY)
-      .attr('y', x - 50)
+      .attr('y', x + labelX)
       .attr('transform', 'rotate(-90)')
       .attr('text-anchor', 'middle')
       .style('font-family', AXIS_DEFAULTS.fontFamily)
-      .style('font-size', `${AXIS_DEFAULTS.fontSize}px`)
+      .style('font-size', `${AXIS_DEFAULTS.labelFontSize}px`)
       .style('fill', AXIS_DEFAULTS.color)
       .text(label);
   }

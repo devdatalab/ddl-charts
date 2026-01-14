@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeEach } from 'vitest';
 import * as d3 from 'd3';
-import { createTrajectoryChart, updateVisibility, highlightCity } from './TrajectoryChart.js';
+import { createTrajectoryChart } from './TrajectoryChart.js';
 
 // Sample test data
 const sampleData = {
@@ -53,6 +53,24 @@ const sampleData = {
         { year: 2020, gdp: 70000, pm25: 10 },
       ],
     },
+    {
+      id: '3',
+      name: 'London',
+      iso3: 'GBR',
+      country: 'United Kingdom',
+      continent: 'Europe',
+      population: 9000000,
+      yearStart: 2013,
+      yearEnd: 2020,
+      gdpStart: 45000,
+      gdpEnd: 48000,
+      pm25Start: 12,
+      pm25End: 10,
+      trajectory: [
+        { year: 2013, gdp: 45000, pm25: 12 },
+        { year: 2020, gdp: 48000, pm25: 10 },
+      ],
+    },
   ],
 };
 
@@ -75,7 +93,7 @@ describe('createTrajectoryChart', () => {
     createTrajectoryChart(container, sampleData);
 
     const trajectories = container.selectAll('.trajectory-line');
-    expect(trajectories.size()).toBe(2);
+    expect(trajectories.size()).toBe(3);
   });
 
   test('renders start and end markers', () => {
@@ -84,15 +102,15 @@ describe('createTrajectoryChart', () => {
     const startMarkers = container.selectAll('.marker-start');
     const endMarkers = container.selectAll('.marker-end');
 
-    expect(startMarkers.size()).toBe(2);
-    expect(endMarkers.size()).toBe(2);
+    expect(startMarkers.size()).toBe(3);
+    expect(endMarkers.size()).toBe(3);
   });
 
-  test('creates legend', () => {
+  test('creates legend items', () => {
     createTrajectoryChart(container, sampleData);
 
-    const legend = container.select('.ddl-legend');
-    expect(legend.node()).not.toBeNull();
+    const legendItems = container.selectAll('.legend-item');
+    expect(legendItems.size()).toBeGreaterThan(0);
   });
 
   test('creates tooltip', () => {
@@ -111,9 +129,24 @@ describe('createTrajectoryChart', () => {
     expect(xAxis.node()).not.toBeNull();
     expect(yAxis.node()).not.toBeNull();
   });
+
+  test('returns colorManager with highlight methods', () => {
+    const chart = createTrajectoryChart(container, sampleData);
+
+    expect(chart.colorManager).toBeDefined();
+    expect(typeof chart.colorManager.isHighlighted).toBe('function');
+    expect(typeof chart.colorManager.toggleHighlight).toBe('function');
+    expect(typeof chart.colorManager.getColor).toBe('function');
+  });
+
+  test('returns toggleHighlight function', () => {
+    const chart = createTrajectoryChart(container, sampleData);
+
+    expect(typeof chart.toggleHighlight).toBe('function');
+  });
 });
 
-describe('updateVisibility', () => {
+describe('colorManager', () => {
   let container;
   let chart;
 
@@ -123,47 +156,78 @@ describe('updateVisibility', () => {
     chart = createTrajectoryChart(container, sampleData);
   });
 
-  test('hides trajectories for hidden countries', () => {
-    updateVisibility(container, { CHN: false, USA: true });
-
-    const chnLine = container.select('[data-iso3="CHN"]');
-    expect(chnLine.style('opacity')).toBe('0');
+  test('default countries are highlighted', () => {
+    expect(chart.colorManager.isHighlighted('CHN')).toBe(true);
+    expect(chart.colorManager.isHighlighted('IND')).toBe(true);
+    expect(chart.colorManager.isHighlighted('USA')).toBe(true);
   });
 
-  test('shows trajectories for visible countries', () => {
-    updateVisibility(container, { CHN: true, USA: true });
+  test('non-default countries are not highlighted', () => {
+    expect(chart.colorManager.isHighlighted('GBR')).toBe(false);
+  });
 
-    const usaLine = container.select('[data-iso3="USA"]');
-    expect(parseFloat(usaLine.style('opacity'))).toBeGreaterThan(0);
+  test('toggleHighlight toggles highlight state', () => {
+    // Toggle off
+    chart.colorManager.toggleHighlight('CHN');
+    expect(chart.colorManager.isHighlighted('CHN')).toBe(false);
+
+    // Toggle on
+    chart.colorManager.toggleHighlight('CHN');
+    expect(chart.colorManager.isHighlighted('CHN')).toBe(true);
+  });
+
+  test('getColor returns color for highlighted country', () => {
+    const color = chart.colorManager.getColor('CHN');
+    expect(color).toBe('#E53935'); // Red for China
+  });
+
+  test('getColor returns muted color for non-highlighted country', () => {
+    const color = chart.colorManager.getColor('GBR');
+    expect(color).toContain('rgba'); // Muted color
+  });
+
+  test('assigns new color when country is highlighted', () => {
+    chart.colorManager.toggleHighlight('GBR'); // Highlight UK
+    const color = chart.colorManager.getColor('GBR');
+    expect(color).not.toContain('rgba'); // Should be a solid color now
   });
 });
 
-describe('highlightCity', () => {
+describe('chart.toggleHighlight', () => {
   let container;
+  let chart;
 
   beforeEach(() => {
     document.body.innerHTML = '<div id="chart-container" style="width: 800px;"></div>';
     container = d3.select('#chart-container');
-    createTrajectoryChart(container, sampleData);
+    chart = createTrajectoryChart(container, sampleData);
   });
 
-  test('increases line width for highlighted city', () => {
-    highlightCity(container, '1');
+  test('toggles country highlight and updates trajectories', () => {
+    // Initially CHN is highlighted
+    expect(chart.colorManager.isHighlighted('CHN')).toBe(true);
 
-    const line = container.select('[data-city-id="1"] .trajectory-line');
-    const strokeWidth = parseFloat(line.style('stroke-width'));
-    expect(strokeWidth).toBeGreaterThan(2);
+    // Toggle off
+    chart.toggleHighlight('CHN');
+    expect(chart.colorManager.isHighlighted('CHN')).toBe(false);
+
+    // The trajectory should now have lower opacity
+    const chnLine = container.select('[data-iso3="CHN"] .trajectory-line');
+    const opacity = parseFloat(chnLine.style('stroke-opacity'));
+    expect(opacity).toBeLessThan(0.5);
   });
 
-  test('clears highlight when id is null', () => {
-    highlightCity(container, '1');
-    highlightCity(container, null);
+  test('can highlight non-default country', () => {
+    // Initially GBR is not highlighted
+    expect(chart.colorManager.isHighlighted('GBR')).toBe(false);
 
-    // All lines should return to normal
-    const lines = container.selectAll('.trajectory-line');
-    lines.each(function () {
-      const strokeWidth = parseFloat(d3.select(this).style('stroke-width'));
-      expect(strokeWidth).toBeLessThanOrEqual(3);
-    });
+    // Toggle on
+    chart.toggleHighlight('GBR');
+    expect(chart.colorManager.isHighlighted('GBR')).toBe(true);
+
+    // The trajectory should now have higher opacity
+    const gbrLine = container.select('[data-iso3="GBR"] .trajectory-line');
+    const opacity = parseFloat(gbrLine.style('stroke-opacity'));
+    expect(opacity).toBeGreaterThan(0.5);
   });
 });
