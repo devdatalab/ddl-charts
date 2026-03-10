@@ -83,6 +83,9 @@ export function createChartContainer(parent, options = {}) {
       sourceEl.textContent = `Source: ${source}`;
     }
     footer.appendChild(sourceEl);
+  } else {
+    // Spacer to push branding to the right
+    footer.appendChild(document.createElement('span'));
   }
 
   if (showBranding) {
