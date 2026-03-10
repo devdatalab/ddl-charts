@@ -1,6 +1,6 @@
 /**
- * OWID-inspired theme for DDL Charts
- * Based on Our World in Data's design language
+ * DDL Charts Theme
+ * Design tokens and base styles for DDL visualizations
  */
 
 /* CSS Variables for easy theming */
@@ -197,6 +197,64 @@
 
 .ddl-search-clear:hover {
   color: var(--ddl-color-text);
+}
+
+/* Branded Chart Container */
+.ddl-branded-container {
+  font-family: var(--ddl-font-family);
+  background: var(--ddl-color-background);
+  border: 1px solid var(--ddl-color-grid);
+  border-radius: var(--ddl-border-radius);
+  overflow: hidden;
+}
+
+.ddl-branded-header {
+  padding: 16px 20px 8px;
+}
+
+.ddl-branded-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.3;
+}
+
+.ddl-branded-subtitle {
+  margin: 4px 0 0;
+  font-size: var(--ddl-font-size-small);
+  color: var(--ddl-color-text-light);
+  line-height: 1.4;
+}
+
+.ddl-branded-body {
+  padding: 0 20px;
+}
+
+.ddl-branded-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 20px 12px;
+  font-size: var(--ddl-font-size-small);
+  color: var(--ddl-color-text-light);
+}
+
+.ddl-branded-source a {
+  color: var(--ddl-color-text-light);
+  text-decoration: underline;
+}
+
+.ddl-branded-source a:hover {
+  color: var(--ddl-color-text);
+}
+
+.ddl-branded-mark {
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--ddl-color-text-light);
+  opacity: 0.6;
 }
 
 /* Responsive adjustments */
