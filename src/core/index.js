@@ -3,3 +3,4 @@ export * from './scales.js';
 export * from './axes.js';
 export * from './colors.js';
 export * from './utils.js';
+export * from './layout.js';

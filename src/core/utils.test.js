@@ -11,7 +11,7 @@ describe('formatNumber', () => {
   });
 
   test('formats thousands', () => {
-    expect(formatNumber(5000)).toBe('5.00K');
+    expect(formatNumber(5000)).toBe('5K');
   });
 
   test('formats small numbers', () => {
@@ -26,7 +26,7 @@ describe('formatNumber', () => {
 
 describe('formatCurrency', () => {
   test('formats with dollar sign', () => {
-    expect(formatCurrency(50000)).toBe('$50.00K');
+    expect(formatCurrency(50000)).toBe('$50K');
   });
 
   test('handles null', () => {

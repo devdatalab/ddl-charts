@@ -28,7 +28,8 @@ src/
 │   ├── scales.js   # D3 scale factories (log, linear, time)
 │   ├── axes.js     # OWID-styled axis generators
 │   ├── colors.js   # Color palettes, country/region highlighting
-│   └── utils.js    # Formatting, data processing, debounce
+│   ├── utils.js    # Formatting, data processing, debounce
+│   └── layout.js   # Label de-collision, beeswarm packing, nearest-point
 ├── components/     # Reusable UI elements
 │   ├── Tooltip.js  # Smart-positioned hover tooltips
 │   ├── Legend.js   # Interactive legend with state
@@ -37,7 +38,7 @@ src/
 ├── charts/         # Chart implementations
 │   └── TrajectoryChart.js  # GDP vs PM2.5 trajectory visualization
 └── styles/
-    └── owid-theme.css  # OWID-inspired theming
+    └── ddl-theme.css   # DDL-branded theming
 ```
 
 ## Core Modules
@@ -57,10 +58,22 @@ src/
 - Built-in palettes: `PRIMARY_COLORS`, `CONTINENT_COLORS`, `REGION_COLORS`
 
 ### Utilities (`core/utils.js`)
-- `formatNumber(n)` - SI notation (1.2M, 3.4B)
+- `formatNumber(n, precision?)` - Compact SI notation (`45K`, `2B`); integer results omit decimals, others use `precision` (default 2, so `1500000` → `1.50M`)
+- `formatPercentage(n, decimals?)` - Percentage with trailing `%` (`45%`, `4.5%`)
+- `formatLocaleNumber(n)` - Full value with thousands separators (`1,234,567`)
 - `formatCurrency(n)` - Dollar formatting
 - `formatPM25(n)` - µg/m³ formatting
 - `smoothValues(arr, window)` - Rolling average
+
+> **Behavior change (unreleased):** `formatNumber` now prints whole-number SI
+> results without trailing zeros — `formatNumber(45000)` returns `"45K"` instead
+> of `"45.00K"`. Non-integer results are unchanged. Warrants a version bump
+> before any release that consumers depend on.
+
+### Layout (`core/layout.js`)
+- `resolveCollisions(positions, minGap)` - Space out crowded label Y positions
+- `beeswarmLayout(values, xScale, dotRadius, centerY, rowSpacing?)` - Deterministic 1D beeswarm packing (O(n²); fine for n ≤ 250)
+- `nearestPoint(points, mouseX, mouseY, snapRadius)` - Nearest-point hit testing for hover (linear scan)
 
 ## Components
 
