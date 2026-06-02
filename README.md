@@ -11,14 +11,19 @@ npm install @devdatalab/ddl-charts
 ## Usage
 
 ```javascript
-import { TrajectoryChart } from '@devdatalab/ddl-charts';
+import * as d3 from 'd3';
+import { createLineChart } from '@devdatalab/ddl-charts';
 
-const chart = TrajectoryChart(document.getElementById('chart'), data, {
-  initialHighlights: ['CHN', 'IND', 'USA'],
-  showSearch: true,
-  showLegend: true
+const chart = createLineChart(d3.select('#chart'), data, {
+  initialHighlights: ['USA', 'CHN', 'IND'],
+  showLegend: true,
+  showLabels: true,
 });
 ```
+
+The library ships three charts — see the [Charts catalogue](#charts-catalogue)
+below: a multi-series **LineChart**, a single-track **BeeswarmChart**, and the
+**TrajectoryChart**.
 
 ## Architecture
 
@@ -36,6 +41,8 @@ src/
 │   ├── SearchFilter.js  # Search input with filtering
 │   └── Container.js     # Responsive SVG containers
 ├── charts/         # Chart implementations
+│   ├── LineChart.js        # Multi-series interactive line chart
+│   ├── BeeswarmChart.js    # Single-track 1D beeswarm (dot strip)
 │   └── TrajectoryChart.js  # GDP vs PM2.5 trajectory visualization
 └── styles/
     └── ddl-theme.css   # DDL-branded theming
@@ -55,7 +62,9 @@ src/
 ### Colors (`core/colors.js`)
 - `createColorManager(highlights)` - Dynamic country highlighting
 - `createRegionColorManager()` - Region-based color assignment
-- Built-in palettes: `PRIMARY_COLORS`, `CONTINENT_COLORS`, `REGION_COLORS`
+- Built-in palettes: `PRIMARY_COLORS`, `CONTINENT_COLORS`, `REGION_COLORS`,
+  `HIGHLIGHT_COLORS` (default categorical), `OKABE_ITO` (colorblind-safe
+  categorical; opt in via a chart's `palette` option)
 
 ### Utilities (`core/utils.js`)
 - `formatNumber(n, precision?)` - Compact SI notation (`45K`, `2B`); integer results omit decimals, others use `precision` (default 2, so `1500000` → `1.50M`)
@@ -105,14 +114,144 @@ const search = createSearchFilter(container, {
 });
 ```
 
-## TrajectoryChart
+## Charts catalogue
 
-The main chart implementation showing city trajectories over time.
+Every chart is an imperative factory — `create*(parent, data, options)` — that
+builds the DOM with D3 and returns an instance object with update methods.
+`parent` is a `d3.Selection` (e.g. `d3.select('#chart')`).
+
+### LineChart
+
+Multi-series interactive line chart. Highlighted series are drawn in full
+colour, raised, and labelled at the line end (de-collided via
+`resolveCollisions`); the rest are muted. Hover snaps to the nearest series
+point for a marker + tooltip. A single-series chart is just the N=1 case
+(`showLegend: false`, `showLabels: false`).
+
+![Line chart example](docs/assets/line-chart.png)
 
 ```javascript
-import { TrajectoryChart } from '@devdatalab/ddl-charts';
+import * as d3 from 'd3';
+import { createLineChart } from '@devdatalab/ddl-charts';
 
-const chart = TrajectoryChart(container, data, {
+const chart = createLineChart(d3.select('#chart'), data, {
+  height: 480,
+  initialHighlights: ['USA', 'CHN', 'IND'],
+  showLegend: true,
+  showLabels: true,
+  curve: 'linear',            // 'linear' | 'cardinal'
+  yTickFormat: (d) => `${d}%`,
+});
+
+chart.toggleHighlight('BRA'); // programmatic highlight toggle
+```
+
+**Data format**
+
+```json
+{
+  "metadata": { "title": "...", "xAxisLabel": "Year", "yAxisLabel": "Urban population (%)" },
+  "series": [
+    {
+      "id": "USA",
+      "name": "United States",
+      "points": [
+        { "year": 1975, "value": 73.7 },
+        { "year": 2020, "value": 82.7 }
+      ]
+    }
+  ]
+}
+```
+
+**Options**
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `height` | `500` | Chart height in px. |
+| `margin` | `{top:30,right:140,bottom:50,left:70}` | Chart margins. |
+| `xKey` / `yKey` | `'year'` / `'value'` | Accessor keys on each point. |
+| `showLegend` | `true` | Clickable legend (toggles highlights). |
+| `showLabels` | `true` | De-collided end-of-line labels for highlighted series. |
+| `showGrid` | `true` | Axis grid lines. |
+| `initialHighlights` | first 3 series | Series ids highlighted on load. |
+| `palette` | `HIGHLIGHT_COLORS` | Categorical palette for highlighted series. |
+| `yZeroBaseline` | `false` | Force the y-domain to start at 0. |
+| `curve` | `'linear'` | Line interpolation (`'linear'` or `'cardinal'`). |
+| `hoverSnapRadius` | `40` | Max px distance for hover snapping. |
+| `xTickFormat` / `yTickFormat` | — | Custom tick formatters. |
+
+Returns `{ container, svg, colorManager, toggleHighlight, updateAll }`.
+
+See [`examples/line_chart.html`](examples/line_chart.html).
+
+### BeeswarmChart
+
+Single horizontal track that packs one value per entity into stacked rows
+(`beeswarmLayout`, O(n²), fine for n ≤ 250). A handful of entities can be
+highlighted (coloured + raised); the rest render as muted background dots.
+Optional median reference line; hover snaps to the nearest dot for a tooltip.
+Compose multi-track figures by stacking several instances.
+
+![Beeswarm chart example](docs/assets/beeswarm-chart.png)
+
+```javascript
+import * as d3 from 'd3';
+import { createBeeswarmChart } from '@devdatalab/ddl-charts';
+
+const chart = createBeeswarmChart(d3.select('#chart'), data, {
+  height: 290,
+  dotRadius: 3.5,
+  rowSpacing: 8,
+  highlights: ['USA', 'CHN', 'IND', 'BRA', 'NGA'],
+  showMedian: true,
+});
+
+chart.setHighlights(['USA', 'IND']); // replace the highlighted set
+```
+
+**Data format**
+
+```json
+{
+  "metadata": { "title": "...", "axisLabel": "Night lights (nW/cm²/sr)" },
+  "items": [
+    { "id": "USA", "name": "United States", "value": 41.2 }
+  ]
+}
+```
+
+**Options**
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `height` | `240` | Chart height in px. |
+| `margin` | `{top:30,right:30,bottom:56,left:30}` | Chart margins. |
+| `valueKey` / `idKey` / `nameKey` | `'value'` / `'id'` / `'name'` | Accessor keys on each item. |
+| `label` | `metadata.axisLabel` | Axis label. |
+| `dotRadius` | `3` | Dot radius in px. |
+| `rowSpacing` | `dotRadius * 2.2` | Vertical row spacing (passed to `beeswarmLayout`). |
+| `highlights` | `[]` | Ids to highlight. |
+| `showMedian` | `true` | Draw a median reference line. |
+| `hoverSnapRadius` | `13` | Max px distance for hover snapping. |
+| `palette` | `HIGHLIGHT_COLORS` | Categorical palette for highlights. |
+| `valueFormat` / `tickFormat` | — | Custom value / tick formatters. |
+
+Non-finite values are filtered (with a `console.warn`) before layout. Returns
+`{ container, svg, setHighlights, update }`.
+
+See [`examples/beeswarm.html`](examples/beeswarm.html).
+
+### TrajectoryChart
+
+The original chart implementation showing city GDP vs PM2.5 trajectories over
+time, with country/region highlighting, search, and an interactive legend.
+
+```javascript
+import * as d3 from 'd3';
+import { createTrajectoryChart } from '@devdatalab/ddl-charts';
+
+const chart = createTrajectoryChart(d3.select('#chart'), data, {
   initialHighlights: ['CHN', 'IND', 'USA'],
   showSearch: true,
   showLegend: true,
@@ -121,7 +260,7 @@ const chart = TrajectoryChart(container, data, {
 });
 ```
 
-### Data Format
+#### Data Format
 
 ```json
 {
@@ -160,9 +299,26 @@ npm test         # Run tests
 npm run build    # Build for production
 ```
 
-## Example
+### Regenerating README visuals
 
-See `examples/city_gdp_pm25.html` for a complete working example with 205+ cities.
+The chart screenshots in this README are rendered headlessly from the example
+HTML so they stay reproducible:
+
+```bash
+npm install --no-save playwright   # heavy, build-time only — not a runtime dep
+npx playwright install chromium    # one-time browser download
+npm run render:examples            # writes docs/assets/*.png
+```
+
+## Examples
+
+The example HTML files import the library source directly (an import map
+resolves `d3` to a CDN ESM build), so they run on any static server or via
+`npm run dev`:
+
+- [`examples/line_chart.html`](examples/line_chart.html) — multi-series LineChart.
+- [`examples/beeswarm.html`](examples/beeswarm.html) — single-track BeeswarmChart.
+- [`examples/city_gdp_pm25.html`](examples/city_gdp_pm25.html) — TrajectoryChart with 205+ cities.
 
 ## License
 

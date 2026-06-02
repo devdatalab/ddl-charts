@@ -120,6 +120,27 @@ export const HIGHLIGHT_COLORS = [
 ];
 
 /**
+ * Okabe-Ito colorblind-safe categorical palette (8 colors).
+ *
+ * A perceptually distinct, colorblind-friendly set widely used for categorical
+ * encodings (originally from Okabe & Ito's "Color Universal Design"). Exported
+ * additively so charts can opt in via `options.palette` without changing the
+ * existing `HIGHLIGHT_COLORS` default. The leading entry (orange) is omitted in
+ * favor of starting on the vivid hues; the 8 values below are the standard set
+ * minus pure black.
+ */
+export const OKABE_ITO = [
+  '#E69F00', // Orange
+  '#56B4E9', // Sky blue
+  '#009E73', // Bluish green
+  '#F0E442', // Yellow
+  '#0072B2', // Blue
+  '#D55E00', // Vermilion
+  '#CC79A7', // Reddish purple
+  '#000000', // Black
+];
+
+/**
  * Get color for a country by ISO3 code.
  * Falls back to muted color if not in COUNTRY_COLORS.
  *
