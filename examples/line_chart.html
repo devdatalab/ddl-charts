@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DDL Charts — Line Chart</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;600;700&display=swap" rel="stylesheet" />
+
+  <!--
+    The library source uses bare `import * as d3 from 'd3'`. This import map
+    resolves that to a CDN ESM build so the example runs without a bundler.
+    (`npm run dev` / Vite resolves it from node_modules instead.)
+  -->
+  <script type="importmap">
+    { "imports": { "d3": "https://cdn.jsdelivr.net/npm/d3@7/+esm" } }
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #fafafa;
+      color: #333;
+    }
+    .page-header { max-width: 980px; margin: 0 auto 16px; }
+    .page-header h1 { font-size: 22px; font-weight: 700; margin: 0 0 4px; color: #2c3e50; }
+    .page-header p { font-size: 13px; color: #666; margin: 0; }
+    #chart {
+      max-width: 980px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <div class="page-header">
+    <h1>Urban population share, 1975–2020</h1>
+    <p>Multi-series line chart (<code>createLineChart</code>). Highlighted series are coloured and labelled at the line end; hover any line to inspect a point. (Pass <code>showLegend: true</code> for a clickable legend instead.)</p>
+  </div>
+
+  <div id="chart"></div>
+
+  <script type="module">
+    import * as d3 from 'd3';
+    import { createLineChart } from '../src/index.js';
+
+    const data = await fetch('./data/line_chart_sample.json').then((r) => r.json());
+
+    createLineChart(d3.select('#chart'), data, {
+      height: 480,
+      initialHighlights: ['USA', 'CHN', 'IND'],
+      showLegend: false,
+      showLabels: true,
+      showGrid: true,
+      curve: 'linear',
+      yTickFormat: (d) => `${d}%`,
+    });
+
+    // Signal for the screenshot script that the chart has rendered.
+    window.__chartReady = true;
+  </script>
+</body>
+</html>

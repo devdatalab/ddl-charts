@@ -1,0 +1,608 @@
+{
+  "metadata": {
+    "title": "Mean night-time light intensity by region",
+    "axisLabel": "Night lights (nW/cm²/sr)"
+  },
+  "items": [
+    {
+      "id": "USA",
+      "name": "United States",
+      "value": 41.2
+    },
+    {
+      "id": "CHN",
+      "name": "China",
+      "value": 28.7
+    },
+    {
+      "id": "IND",
+      "name": "India",
+      "value": 9.4
+    },
+    {
+      "id": "BRA",
+      "name": "Brazil",
+      "value": 14.1
+    },
+    {
+      "id": "NGA",
+      "name": "Nigeria",
+      "value": 3.6
+    },
+    {
+      "id": "R_AA00",
+      "name": "Region AA00",
+      "value": 3.4
+    },
+    {
+      "id": "R_BA01",
+      "name": "Region BA01",
+      "value": 4.1
+    },
+    {
+      "id": "R_CA02",
+      "name": "Region CA02",
+      "value": 9
+    },
+    {
+      "id": "R_DA03",
+      "name": "Region DA03",
+      "value": 10.2
+    },
+    {
+      "id": "R_EA04",
+      "name": "Region EA04",
+      "value": 3.4
+    },
+    {
+      "id": "R_FA05",
+      "name": "Region FA05",
+      "value": 3.8
+    },
+    {
+      "id": "R_GA06",
+      "name": "Region GA06",
+      "value": 2.7
+    },
+    {
+      "id": "R_HA07",
+      "name": "Region HA07",
+      "value": 6.6
+    },
+    {
+      "id": "R_IA08",
+      "name": "Region IA08",
+      "value": 6.8
+    },
+    {
+      "id": "R_JA09",
+      "name": "Region JA09",
+      "value": 7.8
+    },
+    {
+      "id": "R_KA10",
+      "name": "Region KA10",
+      "value": 26.9
+    },
+    {
+      "id": "R_LA11",
+      "name": "Region LA11",
+      "value": 3.3
+    },
+    {
+      "id": "R_MA12",
+      "name": "Region MA12",
+      "value": 5.6
+    },
+    {
+      "id": "R_NA13",
+      "name": "Region NA13",
+      "value": 8.9
+    },
+    {
+      "id": "R_OA14",
+      "name": "Region OA14",
+      "value": 3.3
+    },
+    {
+      "id": "R_PA15",
+      "name": "Region PA15",
+      "value": 1.8
+    },
+    {
+      "id": "R_QA16",
+      "name": "Region QA16",
+      "value": 4.1
+    },
+    {
+      "id": "R_RA17",
+      "name": "Region RA17",
+      "value": 3.1
+    },
+    {
+      "id": "R_SA18",
+      "name": "Region SA18",
+      "value": 15.2
+    },
+    {
+      "id": "R_TA19",
+      "name": "Region TA19",
+      "value": 16.4
+    },
+    {
+      "id": "R_UA20",
+      "name": "Region UA20",
+      "value": 3.2
+    },
+    {
+      "id": "R_VA21",
+      "name": "Region VA21",
+      "value": 7.1
+    },
+    {
+      "id": "R_WA22",
+      "name": "Region WA22",
+      "value": 1.5
+    },
+    {
+      "id": "R_XA23",
+      "name": "Region XA23",
+      "value": 7.5
+    },
+    {
+      "id": "R_YA24",
+      "name": "Region YA24",
+      "value": 2.8
+    },
+    {
+      "id": "R_ZA25",
+      "name": "Region ZA25",
+      "value": 4.1
+    },
+    {
+      "id": "R_AB26",
+      "name": "Region AB26",
+      "value": 2.4
+    },
+    {
+      "id": "R_BB27",
+      "name": "Region BB27",
+      "value": 7.5
+    },
+    {
+      "id": "R_CB28",
+      "name": "Region CB28",
+      "value": 4.5
+    },
+    {
+      "id": "R_DB29",
+      "name": "Region DB29",
+      "value": 5.3
+    },
+    {
+      "id": "R_EB30",
+      "name": "Region EB30",
+      "value": 1.1
+    },
+    {
+      "id": "R_FB31",
+      "name": "Region FB31",
+      "value": 1.7
+    },
+    {
+      "id": "R_GB32",
+      "name": "Region GB32",
+      "value": 1.9
+    },
+    {
+      "id": "R_HB33",
+      "name": "Region HB33",
+      "value": 2.7
+    },
+    {
+      "id": "R_IB34",
+      "name": "Region IB34",
+      "value": 13.4
+    },
+    {
+      "id": "R_JB35",
+      "name": "Region JB35",
+      "value": 1.4
+    },
+    {
+      "id": "R_KB36",
+      "name": "Region KB36",
+      "value": 2.2
+    },
+    {
+      "id": "R_LB37",
+      "name": "Region LB37",
+      "value": 5.4
+    },
+    {
+      "id": "R_MB38",
+      "name": "Region MB38",
+      "value": 3.4
+    },
+    {
+      "id": "R_NB39",
+      "name": "Region NB39",
+      "value": 2.7
+    },
+    {
+      "id": "R_OB40",
+      "name": "Region OB40",
+      "value": 10.1
+    },
+    {
+      "id": "R_PB41",
+      "name": "Region PB41",
+      "value": 3.7
+    },
+    {
+      "id": "R_QB42",
+      "name": "Region QB42",
+      "value": 2.5
+    },
+    {
+      "id": "R_RB43",
+      "name": "Region RB43",
+      "value": 0.7
+    },
+    {
+      "id": "R_SB44",
+      "name": "Region SB44",
+      "value": 1.1
+    },
+    {
+      "id": "R_TB45",
+      "name": "Region TB45",
+      "value": 3.7
+    },
+    {
+      "id": "R_UB46",
+      "name": "Region UB46",
+      "value": 5.7
+    },
+    {
+      "id": "R_VB47",
+      "name": "Region VB47",
+      "value": 9.2
+    },
+    {
+      "id": "R_WB48",
+      "name": "Region WB48",
+      "value": 3.2
+    },
+    {
+      "id": "R_XB49",
+      "name": "Region XB49",
+      "value": 7.4
+    },
+    {
+      "id": "R_YB50",
+      "name": "Region YB50",
+      "value": 9.5
+    },
+    {
+      "id": "R_ZB51",
+      "name": "Region ZB51",
+      "value": 6.7
+    },
+    {
+      "id": "R_AC52",
+      "name": "Region AC52",
+      "value": 1.6
+    },
+    {
+      "id": "R_BC53",
+      "name": "Region BC53",
+      "value": 12.6
+    },
+    {
+      "id": "R_CC54",
+      "name": "Region CC54",
+      "value": 9.4
+    },
+    {
+      "id": "R_DC55",
+      "name": "Region DC55",
+      "value": 4.9
+    },
+    {
+      "id": "R_EC56",
+      "name": "Region EC56",
+      "value": 32
+    },
+    {
+      "id": "R_FC57",
+      "name": "Region FC57",
+      "value": 1
+    },
+    {
+      "id": "R_GC58",
+      "name": "Region GC58",
+      "value": 5.2
+    },
+    {
+      "id": "R_HC59",
+      "name": "Region HC59",
+      "value": 5.2
+    },
+    {
+      "id": "R_IC60",
+      "name": "Region IC60",
+      "value": 7.6
+    },
+    {
+      "id": "R_JC61",
+      "name": "Region JC61",
+      "value": 3.4
+    },
+    {
+      "id": "R_KC62",
+      "name": "Region KC62",
+      "value": 1.5
+    },
+    {
+      "id": "R_LC63",
+      "name": "Region LC63",
+      "value": 4.1
+    },
+    {
+      "id": "R_MC64",
+      "name": "Region MC64",
+      "value": 15.5
+    },
+    {
+      "id": "R_NC65",
+      "name": "Region NC65",
+      "value": 3.3
+    },
+    {
+      "id": "R_OC66",
+      "name": "Region OC66",
+      "value": 6.6
+    },
+    {
+      "id": "R_PC67",
+      "name": "Region PC67",
+      "value": 16.4
+    },
+    {
+      "id": "R_QC68",
+      "name": "Region QC68",
+      "value": 1.6
+    },
+    {
+      "id": "R_RC69",
+      "name": "Region RC69",
+      "value": 9.5
+    },
+    {
+      "id": "R_SC70",
+      "name": "Region SC70",
+      "value": 3.3
+    },
+    {
+      "id": "R_TC71",
+      "name": "Region TC71",
+      "value": 7.6
+    },
+    {
+      "id": "R_UC72",
+      "name": "Region UC72",
+      "value": 11.9
+    },
+    {
+      "id": "R_VC73",
+      "name": "Region VC73",
+      "value": 2.9
+    },
+    {
+      "id": "R_WC74",
+      "name": "Region WC74",
+      "value": 1.8
+    },
+    {
+      "id": "R_XC75",
+      "name": "Region XC75",
+      "value": 6
+    },
+    {
+      "id": "R_YC76",
+      "name": "Region YC76",
+      "value": 6
+    },
+    {
+      "id": "R_ZC77",
+      "name": "Region ZC77",
+      "value": 2.3
+    },
+    {
+      "id": "R_AD78",
+      "name": "Region AD78",
+      "value": 1.7
+    },
+    {
+      "id": "R_BD79",
+      "name": "Region BD79",
+      "value": 1.9
+    },
+    {
+      "id": "R_CD80",
+      "name": "Region CD80",
+      "value": 3.2
+    },
+    {
+      "id": "R_DD81",
+      "name": "Region DD81",
+      "value": 0.9
+    },
+    {
+      "id": "R_ED82",
+      "name": "Region ED82",
+      "value": 1.3
+    },
+    {
+      "id": "R_FD83",
+      "name": "Region FD83",
+      "value": 2.8
+    },
+    {
+      "id": "R_GD84",
+      "name": "Region GD84",
+      "value": 10.2
+    },
+    {
+      "id": "R_HD85",
+      "name": "Region HD85",
+      "value": 27
+    },
+    {
+      "id": "R_ID86",
+      "name": "Region ID86",
+      "value": 6.4
+    },
+    {
+      "id": "R_JD87",
+      "name": "Region JD87",
+      "value": 3.3
+    },
+    {
+      "id": "R_KD88",
+      "name": "Region KD88",
+      "value": 11.1
+    },
+    {
+      "id": "R_LD89",
+      "name": "Region LD89",
+      "value": 8.2
+    },
+    {
+      "id": "R_MD90",
+      "name": "Region MD90",
+      "value": 5.8
+    },
+    {
+      "id": "R_ND91",
+      "name": "Region ND91",
+      "value": 2.6
+    },
+    {
+      "id": "R_OD92",
+      "name": "Region OD92",
+      "value": 30.1
+    },
+    {
+      "id": "R_PD93",
+      "name": "Region PD93",
+      "value": 3.5
+    },
+    {
+      "id": "R_QD94",
+      "name": "Region QD94",
+      "value": 2.9
+    },
+    {
+      "id": "R_RD95",
+      "name": "Region RD95",
+      "value": 2.9
+    },
+    {
+      "id": "R_SD96",
+      "name": "Region SD96",
+      "value": 20
+    },
+    {
+      "id": "R_TD97",
+      "name": "Region TD97",
+      "value": 27.5
+    },
+    {
+      "id": "R_UD98",
+      "name": "Region UD98",
+      "value": 2.6
+    },
+    {
+      "id": "R_VD99",
+      "name": "Region VD99",
+      "value": 2.4
+    },
+    {
+      "id": "R_WD100",
+      "name": "Region WD100",
+      "value": 5.9
+    },
+    {
+      "id": "R_XD101",
+      "name": "Region XD101",
+      "value": 2.7
+    },
+    {
+      "id": "R_YD102",
+      "name": "Region YD102",
+      "value": 9.7
+    },
+    {
+      "id": "R_ZD103",
+      "name": "Region ZD103",
+      "value": 6.5
+    },
+    {
+      "id": "R_AE104",
+      "name": "Region AE104",
+      "value": 6.5
+    },
+    {
+      "id": "R_BE105",
+      "name": "Region BE105",
+      "value": 1.3
+    },
+    {
+      "id": "R_CE106",
+      "name": "Region CE106",
+      "value": 7.6
+    },
+    {
+      "id": "R_DE107",
+      "name": "Region DE107",
+      "value": 2.5
+    },
+    {
+      "id": "R_EE108",
+      "name": "Region EE108",
+      "value": 4
+    },
+    {
+      "id": "R_FE109",
+      "name": "Region FE109",
+      "value": 5
+    },
+    {
+      "id": "R_GE110",
+      "name": "Region GE110",
+      "value": 3.5
+    },
+    {
+      "id": "R_HE111",
+      "name": "Region HE111",
+      "value": 2
+    },
+    {
+      "id": "R_IE112",
+      "name": "Region IE112",
+      "value": 6.2
+    },
+    {
+      "id": "R_JE113",
+      "name": "Region JE113",
+      "value": 4
+    },
+    {
+      "id": "R_KE114",
+      "name": "Region KE114",
+      "value": 3.3
+    }
+  ]
+}

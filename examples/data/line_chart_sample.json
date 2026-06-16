@@ -1,0 +1,377 @@
+{
+  "metadata": {
+    "title": "Urban population share, 1975-2020",
+    "xAxisLabel": "Year",
+    "yAxisLabel": "Urban population (%)"
+  },
+  "series": [
+    {
+      "id": "USA",
+      "name": "United States",
+      "points": [
+        {
+          "year": 1975,
+          "value": 73.8
+        },
+        {
+          "year": 1980,
+          "value": 73.9
+        },
+        {
+          "year": 1985,
+          "value": 75.3
+        },
+        {
+          "year": 1990,
+          "value": 76.3
+        },
+        {
+          "year": 1995,
+          "value": 77
+        },
+        {
+          "year": 2000,
+          "value": 79
+        },
+        {
+          "year": 2005,
+          "value": 80
+        },
+        {
+          "year": 2010,
+          "value": 81.7
+        },
+        {
+          "year": 2015,
+          "value": 82.9
+        },
+        {
+          "year": 2020,
+          "value": 82.7
+        }
+      ]
+    },
+    {
+      "id": "BRA",
+      "name": "Brazil",
+      "points": [
+        {
+          "year": 1975,
+          "value": 60.4
+        },
+        {
+          "year": 1980,
+          "value": 62.2
+        },
+        {
+          "year": 1985,
+          "value": 64.5
+        },
+        {
+          "year": 1990,
+          "value": 67.3
+        },
+        {
+          "year": 1995,
+          "value": 71.3
+        },
+        {
+          "year": 2000,
+          "value": 76.1
+        },
+        {
+          "year": 2005,
+          "value": 80.5
+        },
+        {
+          "year": 2010,
+          "value": 83.9
+        },
+        {
+          "year": 2015,
+          "value": 85.5
+        },
+        {
+          "year": 2020,
+          "value": 87.1
+        }
+      ]
+    },
+    {
+      "id": "CHN",
+      "name": "China",
+      "points": [
+        {
+          "year": 1975,
+          "value": 17.9
+        },
+        {
+          "year": 1980,
+          "value": 18.3
+        },
+        {
+          "year": 1985,
+          "value": 23.1
+        },
+        {
+          "year": 1990,
+          "value": 28.2
+        },
+        {
+          "year": 1995,
+          "value": 35.4
+        },
+        {
+          "year": 2000,
+          "value": 42.4
+        },
+        {
+          "year": 2005,
+          "value": 49.6
+        },
+        {
+          "year": 2010,
+          "value": 56.2
+        },
+        {
+          "year": 2015,
+          "value": 59.9
+        },
+        {
+          "year": 2020,
+          "value": 60.7
+        }
+      ]
+    },
+    {
+      "id": "IND",
+      "name": "India",
+      "points": [
+        {
+          "year": 1975,
+          "value": 20.8
+        },
+        {
+          "year": 1980,
+          "value": 22.2
+        },
+        {
+          "year": 1985,
+          "value": 23
+        },
+        {
+          "year": 1990,
+          "value": 25.3
+        },
+        {
+          "year": 1995,
+          "value": 26.7
+        },
+        {
+          "year": 2000,
+          "value": 29.2
+        },
+        {
+          "year": 2005,
+          "value": 30.7
+        },
+        {
+          "year": 2010,
+          "value": 32.6
+        },
+        {
+          "year": 2015,
+          "value": 34.5
+        },
+        {
+          "year": 2020,
+          "value": 35
+        }
+      ]
+    },
+    {
+      "id": "IDN",
+      "name": "Indonesia",
+      "points": [
+        {
+          "year": 1975,
+          "value": 18.9
+        },
+        {
+          "year": 1980,
+          "value": 20.8
+        },
+        {
+          "year": 1985,
+          "value": 23.6
+        },
+        {
+          "year": 1990,
+          "value": 28.7
+        },
+        {
+          "year": 1995,
+          "value": 35.2
+        },
+        {
+          "year": 2000,
+          "value": 41.5
+        },
+        {
+          "year": 2005,
+          "value": 46.9
+        },
+        {
+          "year": 2010,
+          "value": 51.5
+        },
+        {
+          "year": 2015,
+          "value": 55
+        },
+        {
+          "year": 2020,
+          "value": 56.3
+        }
+      ]
+    },
+    {
+      "id": "NGA",
+      "name": "Nigeria",
+      "points": [
+        {
+          "year": 1975,
+          "value": 22.8
+        },
+        {
+          "year": 1980,
+          "value": 24.6
+        },
+        {
+          "year": 1985,
+          "value": 27.2
+        },
+        {
+          "year": 1990,
+          "value": 31.1
+        },
+        {
+          "year": 1995,
+          "value": 35.9
+        },
+        {
+          "year": 2000,
+          "value": 39.4
+        },
+        {
+          "year": 2005,
+          "value": 45.1
+        },
+        {
+          "year": 2010,
+          "value": 48.2
+        },
+        {
+          "year": 2015,
+          "value": 51.5
+        },
+        {
+          "year": 2020,
+          "value": 51.4
+        }
+      ]
+    },
+    {
+      "id": "DEU",
+      "name": "Germany",
+      "points": [
+        {
+          "year": 1975,
+          "value": 72.1
+        },
+        {
+          "year": 1980,
+          "value": 72.1
+        },
+        {
+          "year": 1985,
+          "value": 73
+        },
+        {
+          "year": 1990,
+          "value": 73.8
+        },
+        {
+          "year": 1995,
+          "value": 74.8
+        },
+        {
+          "year": 2000,
+          "value": 76
+        },
+        {
+          "year": 2005,
+          "value": 75.6
+        },
+        {
+          "year": 2010,
+          "value": 77.2
+        },
+        {
+          "year": 2015,
+          "value": 77.9
+        },
+        {
+          "year": 2020,
+          "value": 78
+        }
+      ]
+    },
+    {
+      "id": "JPN",
+      "name": "Japan",
+      "points": [
+        {
+          "year": 1975,
+          "value": 75.3
+        },
+        {
+          "year": 1980,
+          "value": 76.3
+        },
+        {
+          "year": 1985,
+          "value": 78.2
+        },
+        {
+          "year": 1990,
+          "value": 79.3
+        },
+        {
+          "year": 1995,
+          "value": 83.1
+        },
+        {
+          "year": 2000,
+          "value": 85.2
+        },
+        {
+          "year": 2005,
+          "value": 88.2
+        },
+        {
+          "year": 2010,
+          "value": 89.7
+        },
+        {
+          "year": 2015,
+          "value": 91.4
+        },
+        {
+          "year": 2020,
+          "value": 91.6
+        }
+      ]
+    }
+  ]
+}
