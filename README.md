@@ -12,6 +12,8 @@ npm install @devdatalab/ddl-charts
 
 ```javascript
 import { TrajectoryChart } from '@devdatalab/ddl-charts';
+// The stylesheet is not auto-imported — include it once in your app:
+import '@devdatalab/ddl-charts/styles/ddl-theme.css';
 
 const chart = TrajectoryChart(document.getElementById('chart'), data, {
   initialHighlights: ['CHN', 'IND', 'USA'],
@@ -37,7 +39,7 @@ src/
 ├── charts/         # Chart implementations
 │   └── TrajectoryChart.js  # GDP vs PM2.5 trajectory visualization
 └── styles/
-    └── owid-theme.css  # OWID-inspired theming
+    └── ddl-theme.css  # DDL / OWID-inspired theming
 ```
 
 ## Core Modules

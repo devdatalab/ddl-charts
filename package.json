@@ -3,7 +3,32 @@
   "version": "0.1.0",
   "description": "D3-based charting library for DDL - OWID-inspired interactive data visualizations",
   "type": "module",
-  "main": "src/index.js",
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./styles/ddl-theme.css": "./src/styles/ddl-theme.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "!src/**/*.test.js",
+    "README.md"
+  ],
+  "sideEffects": [
+    "*.css"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devdatalab/ddl-charts.git"
+  },
+  "homepage": "https://github.com/devdatalab/ddl-charts#readme",
+  "bugs": {
+    "url": "https://github.com/devdatalab/ddl-charts/issues"
+  },
   "scripts": {
     "test": "vitest",
     "test:ui": "vitest --ui",
