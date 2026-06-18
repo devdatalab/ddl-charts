@@ -1,0 +1,44 @@
+name: Publish to npm
+
+# Publishes the package when a GitHub Release is published.
+# Flow: bump version + push tag locally (see RELEASING.md), create the
+# GitHub Release for that tag, and this workflow runs tests then publishes.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify release tag matches package.json version
+        run: |
+          PKG_VERSION="v$(node -p "require('./package.json').version")"
+          TAG="${GITHUB_REF_NAME}"
+          if [ "$PKG_VERSION" != "$TAG" ]; then
+            echo "::error::Release tag ($TAG) does not match package.json version ($PKG_VERSION)."
+            echo "Run 'npm version' to bump and tag, then create the release for that tag."
+            exit 1
+          fi
+
+      - name: Run tests
+        run: npm run test:run
+
+      - name: Publish
+        run: npm publish --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
