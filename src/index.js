@@ -2,3 +2,4 @@
 export * from './core/index.js';
 export * from './components/index.js';
 export * from './charts/index.js';
+export * from './assets/logo.js';

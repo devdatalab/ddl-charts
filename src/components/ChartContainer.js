@@ -15,6 +15,7 @@
  */
 
 import { UI_COLORS } from '../core/colors.js';
+import { createLogo } from '../assets/logo.js';
 
 /**
  * Creates a branded chart container with title, source, and DDL mark.
@@ -89,10 +90,7 @@ export function createChartContainer(parent, options = {}) {
   }
 
   if (showBranding) {
-    const brandEl = document.createElement('span');
-    brandEl.className = 'ddl-branded-mark';
-    brandEl.textContent = 'DDL';
-    brandEl.title = 'Dev Data Lab';
+    const brandEl = createLogo({ label: 'Dev Data Lab', className: 'ddl-branded-mark' });
     footer.appendChild(brandEl);
   }
 
