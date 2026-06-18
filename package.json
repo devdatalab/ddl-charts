@@ -1,6 +1,6 @@
 {
   "name": "@devdatalab/ddl-charts",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "D3-based charting library for DDL - OWID-inspired interactive data visualizations",
   "type": "module",
   "main": "./src/index.js",
